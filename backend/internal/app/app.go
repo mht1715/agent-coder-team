@@ -10,6 +10,7 @@ import (
 	"backend/internal/application/conversation"
 	"backend/internal/application/profile"
 	"backend/internal/application/project"
+	workspaceapp "backend/internal/application/workspace"
 	"backend/internal/config"
 	"backend/internal/event"
 	"backend/internal/health"
@@ -78,6 +79,7 @@ func New(cfg *config.SysConfig) (*App, error) {
 		return nil, err
 	}
 	projectService := project.NewService(repositories.Projects, workspaceValidator)
+	workspaceService := workspaceapp.NewService(workspaceValidator)
 	profileService := profile.NewService(
 		repositories.Projects,
 		repositories.Profiles,
@@ -92,7 +94,7 @@ func New(cfg *config.SysConfig) (*App, error) {
 		eventBroker,
 	)
 	healthSvc := health.New(db, redisClient)
-	server := httpserver.New(cfg, healthSvc, authService, projectService, conversationService, profileService)
+	server := httpserver.New(cfg, healthSvc, authService, projectService, conversationService, profileService, workspaceService)
 
 	return &App{
 		cfg:    cfg,

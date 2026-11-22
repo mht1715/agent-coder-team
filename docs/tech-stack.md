@@ -63,7 +63,7 @@
 | 流式事件 | 原生 EventSource/fetch | SSE |
 | 桌面 UI | Element Plus | 工作台、表格、树、抽屉 |
 | 移动 UI | Vant 4 | 触控和底部导航 |
-| 样式 | SCSS + CSS Variables | 主题 Token |
+| 样式 | SCSS 嵌套 + CSS Variables | 主题 Token，统一组件内嵌套写法 |
 | 国际化 | vue-i18n | 懒加载语言包 + Intl |
 | 工具库 | VueUse | 常用组合式能力 |
 | 校验 | Zod | 运行时 Schema 校验 |
@@ -71,7 +71,7 @@
 | Diff | diff2html | Diff 审核展示 |
 | 虚拟列表 | vue-virtual-scroller | 长聊天/任务列表 |
 | 日期 | dayjs | 轻量时间处理 |
-| 图标 | Element Plus Icons + Vant Icons | 不额外引入图标库 |
+| 图标 | Lucide + Vant Icons | Lucide 为 ISC 许可，免费商用；不使用 emoji 代替图标 |
 | 单元测试 | Vitest + Vue Test Utils | 组件和组合式函数 |
 | E2E | Playwright | 关键用户流程 |
 | Mock | MSW | API mock |

@@ -108,7 +108,7 @@ transport -> application -> domain <- infrastructure
 ```text
 /auth/login /auth/refresh /auth/logout
 /me /me/preferences /devices
-/projects /projects/:id /projects/:id/index
+/projects /projects/:id /projects/:id/index /workspaces/browse
 /conversations/:id/messages /conversations/:id/stream
 /tasks/:id /tasks/:id/cancel /tasks/:id/retry /tasks/:id/approve
 /artifacts /memory /usage /events

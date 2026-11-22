@@ -68,6 +68,14 @@ func NewService(
 	}
 }
 
+func (s *Service) RegistrationOpen(ctx context.Context) (bool, error) {
+	count, err := s.users.Count(ctx)
+	if err != nil {
+		return false, err
+	}
+	return count == 0, nil
+}
+
 func (s *Service) Register(ctx context.Context, input RegisterInput, meta ClientMeta) (*domain.User, *TokenPair, error) {
 	username := strings.ToLower(strings.TrimSpace(input.Username))
 	displayName := strings.TrimSpace(input.DisplayName)

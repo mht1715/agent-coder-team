@@ -50,6 +50,15 @@ func NewAuthHandler(authSvc *auth.Service) *AuthHandler {
 	return &AuthHandler{auth: authSvc}
 }
 
+func (h *AuthHandler) BootstrapStatus(c *gin.Context) {
+	open, err := h.auth.RegistrationOpen(c.Request.Context())
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "internal_error", "bootstrap status failed")
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"registration_open": open})
+}
+
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req registerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

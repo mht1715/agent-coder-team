@@ -11,11 +11,13 @@ import (
 	conversationapp "backend/internal/application/conversation"
 	profileapp "backend/internal/application/profile"
 	projectapp "backend/internal/application/project"
+	workspaceapp "backend/internal/application/workspace"
 	"backend/internal/config"
 	"backend/internal/health"
 	"backend/internal/transport/http/handler"
 	"backend/internal/transport/http/middleware"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
@@ -32,15 +34,30 @@ func New(
 	projectSvc *projectapp.Service,
 	conversationSvc *conversationapp.Service,
 	profileSvc *profileapp.Service,
+	workspaceSvc *workspaceapp.Service,
 ) *Server {
 	healthHandler := handler.NewHealthHandler(healthSvc, cfg.App.Name, cfg.App.Version, cfg.App.Environment)
 	authHandler := handler.NewAuthHandler(authSvc)
 	projectHandler := handler.NewProjectHandler(projectSvc)
 	conversationHandler := handler.NewConversationHandler(conversationSvc)
 	profileHandler := handler.NewProfileHandler(profileSvc)
+	workspaceHandler := handler.NewWorkspaceHandler(workspaceSvc)
 
 	router := gin.New()
+	corsConfig := cors.Config{
+		AllowMethods:     []string{"GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Request-ID"},
+		ExposeHeaders:    []string{"X-Request-ID"},
+		AllowCredentials: false,
+		MaxAge:           12 * time.Hour,
+	}
+	if cfg.App.Environment == "development" {
+		corsConfig.AllowAllOrigins = true
+	} else {
+		corsConfig.AllowOrigins = cfg.Security.AllowedOrigins
+	}
 	router.Use(
+		cors.New(corsConfig),
 		gin.Recovery(),
 		middleware.RequestID(),
 		middleware.AccessLog(),
@@ -51,6 +68,7 @@ func New(
 
 	v1 := router.Group("/api/v1")
 	v1.GET("/meta", healthHandler.Meta)
+	v1.GET("/auth/bootstrap", authHandler.BootstrapStatus)
 	v1.POST("/auth/register", authHandler.Register)
 	v1.POST("/auth/login", authHandler.Login)
 	v1.POST("/auth/refresh", authHandler.Refresh)
@@ -63,6 +81,7 @@ func New(
 	protected.GET("/projects", projectHandler.List)
 	protected.GET("/projects/:id", projectHandler.Get)
 	protected.PATCH("/projects/:id", projectHandler.Update)
+	protected.GET("/workspaces/browse", workspaceHandler.Browse)
 	protected.GET("/projects/:id/profile", profileHandler.Get)
 	protected.POST("/projects/:id/profile/scan", profileHandler.Scan)
 	protected.GET("/projects/:id/conversations", conversationHandler.ListProjectConversations)

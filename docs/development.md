@@ -154,6 +154,9 @@ docker compose exec redis redis-cli
 
 ```text
 agent-coder-team/
+├─ apps/
+│  └─ desktop/             # Wails 3 + Vue 3 + Element Plus
+│     └─ frontend/         # 桌面 UI
 ├─ backend/
 │  ├─ cmd/app/              # 服务入口
 │  ├─ internal/config/      # 配置加载
@@ -269,6 +272,7 @@ docker compose exec backend go test ./...
 - 项目创建、列表、详情和更新。
 - 项目群聊、消息分页、消息发送和 SSE 实时事件。
 - 项目工作目录校验、技术栈识别和项目画像。
+- Wails 3 桌面端骨架：登录、项目列表、项目群聊、项目画像和主题切换。
 - 基础单元测试。
 
 可用端点：
@@ -296,6 +300,83 @@ GET /api/v1/conversations/:id/stream
 
 下一步：
 
-1. Wails 桌面端骨架。
+1. Wails IPC 安全传输适配器。
 2. 主 Agent 消息流与任务模型。
 3. M0 技术验证：Docker 沙箱、pgvector、Tailscale/TLS。
+## 12. 开发账号
+
+本地开发默认账号由 seed 命令创建：
+
+```text
+username: admin
+password: admin12345
+```
+
+如果数据库被重置，执行：
+
+```bash
+docker compose exec backend go run ./cmd/seed
+```
+
+可以通过环境变量覆盖：
+
+```bash
+docker compose exec -e SEED_USERNAME=admin -e SEED_PASSWORD=admin12345 backend go run ./cmd/seed
+```
+
+该账号只用于本地开发，不会进入生产环境。
+
+## 13. 桌面端开发
+
+安装 Wails 3 CLI：
+
+```bash
+go install github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0
+```
+
+确保 `$(go env GOPATH)/bin` 在 PATH 中。
+
+启动后端：
+
+```bash
+docker compose up -d backend
+```
+
+启动桌面端开发模式：
+
+```bash
+cd apps/desktop
+wails3 dev
+```
+
+桌面端 API 地址在 `.env.development` 和 `.env.production` 中配置：
+
+```text
+http://127.0.0.1:18080/api/v1
+```
+
+Vite 同时保留 `/api` 代理，用于浏览器开发模式。后端开发环境允许本地 CORS。
+
+构建桌面端：
+
+```bash
+cd apps/desktop
+wails3 build
+```
+
+构建产物：
+
+```text
+apps/desktop/bin/
+```
+
+当前桌面端使用开发期 HTTP API 适配器。下一阶段会替换为 Wails IPC 安全适配器，生产环境不开放本地明文 HTTP。
+
+桌面端当前页面：
+
+- 登录 / 首次创建本地账号。
+- 项目列表和创建项目。
+- 项目群聊、消息发送和 SSE 实时消息。
+- 项目画像查看与扫描。
+- 深色 / 浅色 / 跟随系统主题。
+- 中文 / 英文切换。

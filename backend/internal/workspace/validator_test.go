@@ -46,3 +46,50 @@ func TestValidatePath(t *testing.T) {
 		t.Fatalf("expected new project path to be valid: %v", err)
 	}
 }
+
+func TestBrowse(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"alpha", "beta"} {
+		if err := os.MkdirAll(filepath.Join(root, name), 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(root, "note.txt"), []byte("not a directory"), 0o644); err != nil {
+		t.Fatalf("write file: %v", err)
+	}
+	outside := t.TempDir()
+
+	validator, err := NewValidator(config.WorkspaceConfig{
+		AllowedRoots: []string{root},
+		MaxScanFiles: 100,
+	})
+	if err != nil {
+		t.Fatalf("new validator: %v", err)
+	}
+
+	result, err := validator.Browse(root)
+	if err != nil {
+		t.Fatalf("browse root: %v", err)
+	}
+	if len(result.Entries) != 2 {
+		t.Fatalf("expected 2 directory entries, got %d", len(result.Entries))
+	}
+	if result.Entries[0].Name != "alpha" || result.Entries[1].Name != "beta" {
+		t.Fatalf("unexpected entries: %#v", result.Entries)
+	}
+	if result.Parent != "" {
+		t.Fatalf("root should not have a parent, got %q", result.Parent)
+	}
+
+	child, err := validator.Browse(filepath.Join(root, "alpha"))
+	if err != nil {
+		t.Fatalf("browse child: %v", err)
+	}
+	if child.Parent != root {
+		t.Fatalf("expected parent %q, got %q", root, child.Parent)
+	}
+
+	if _, err := validator.Browse(outside); err == nil {
+		t.Fatal("expected outside directory to be rejected")
+	}
+}

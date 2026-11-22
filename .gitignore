@@ -1,32 +1,33 @@
-# If you prefer the allow list template instead of the deny list, see community template:
-# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
-#
-# Binaries for programs and plugins
+# Binaries and compiled output
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
-
-# Test binary, built with `go test -c`
 *.test
-
-# Code coverage profiles and other test artifacts
 *.out
+*.obj
+*.ilk
+*.idb
+*.pdb
+*.class
+*.syso
+*.tsbuildinfo
+
+# Test and coverage output
 coverage.html
 coverage.txt
 coverage.xml
 *.coverprofile
 profile.cov
+**/coverage/
+**/TestResults/
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
-# Go workspace file
+# Go workspace files
 go.work
 go.work.sum
 
-# env file
+# Environment and local configuration
 .env
 .env.local
 /backend/config/config.yml
@@ -37,6 +38,53 @@ go.work.sum
 /workspaces/*
 !/workspaces/.gitkeep
 
-# Editor/IDE
-.idea/
+# IDE and editor local state
+.vs/
+**/.vs/
 .vscode/
+**/.vscode/
+.idea/
+**/.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.vssettings
+*.vsidx
+*.vspscc
+*.vspx
+*.dbmdl
+*.jfm
+*.log
+*.tlog
+*.cache
+
+# Dependency, build and framework caches
+**/bin/
+**/obj/
+**/dist/
+**/node_modules/
+**/.pnpm-store/
+**/.vite/
+**/.cache/
+**/Debug/
+**/Release/
+
+# Wails local generated state. apps/desktop/build is packaging source and is intentionally tracked.
+**/.task/
+**/.wails/
+**/frontend/bindings/
+apps/desktop/build/android/.gradle/
+apps/desktop/build/android/local.properties
+apps/desktop/build/ios/DerivedData/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+Desktop.iniapps/desktop/build/android/app/build/
+apps/desktop/build/android/.gradle/
+apps/desktop/build/android/local.properties
+apps/desktop/build/ios/DerivedData/
+apps/desktop/build/ios/build/
+apps/desktop/build/darwin/build/
+apps/desktop/build/linux/build/
