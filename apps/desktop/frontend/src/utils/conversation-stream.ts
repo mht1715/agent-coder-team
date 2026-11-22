@@ -1,11 +1,14 @@
-﻿import { getWailsRuntime, isWailsRuntime } from '../api/client'
+import { getWailsRuntime, isWailsRuntime } from '../api/client'
 import { conversationStreamUrl } from '../api/conversations'
 import { tokenStorage } from '../api/token-storage'
 import { connectSSE } from './sse'
-import type { Message } from '../types/api'
+import type { Message, MessageDelta } from '../types/api'
 
 export interface ConversationStreamHandlers {
-  onMessage: (message: Message) => void
+  onMessage?: (message: Message) => void
+  onDelta?: (delta: MessageDelta) => void
+  onThinking?: (active: boolean) => void
+  onEvent?: (type: string, data: unknown) => void
   onError: (error?: unknown) => void
 }
 
@@ -17,6 +20,42 @@ interface WailsConversationEvent {
 
 export type ConversationStreamCleanup = () => Promise<void>
 
+function dispatchEvent(
+  eventName: string,
+  rawData: string,
+  handlers: ConversationStreamHandlers,
+): void {
+  if (eventName === 'stream.error') {
+    handlers.onThinking?.(false)
+    handlers.onError(new Error('conversation stream disconnected'))
+    return
+  }
+  if (!rawData) return
+
+  let data: unknown
+  try {
+    data = JSON.parse(rawData) as unknown
+  } catch {
+    handlers.onError(new Error('invalid conversation event'))
+    return
+  }
+
+  switch (eventName) {
+    case 'message.created':
+      handlers.onMessage?.(data as Message)
+      break
+    case 'message.delta':
+      handlers.onDelta?.(data as MessageDelta)
+      break
+    case 'agent.thinking':
+      handlers.onThinking?.(Boolean((data as { active?: boolean }).active))
+      break
+    default:
+      break
+  }
+  handlers.onEvent?.(eventName, data)
+}
+
 export async function subscribeConversationStream(
   conversationId: string,
   handlers: ConversationStreamHandlers,
@@ -26,16 +65,7 @@ export async function subscribeConversationStream(
     const unsubscribe = runtime.Events.On('conversation.event', (event) => {
       const payload = event.data as WailsConversationEvent | undefined
       if (!payload || payload.conversation_id !== conversationId) return
-      if (payload.event === 'message.created' && payload.data) {
-        try {
-          handlers.onMessage(JSON.parse(payload.data) as Message)
-        } catch {
-          handlers.onError(new Error('invalid conversation event'))
-        }
-      }
-      if (payload.event === 'stream.error') {
-        handlers.onError(new Error('conversation stream disconnected'))
-      }
+      dispatchEvent(payload.event, payload.data || '', handlers)
     })
 
     try {
@@ -66,14 +96,12 @@ export async function subscribeConversationStream(
     token,
     signal: controller.signal,
     onEvent: (event) => {
-      if (event.event !== 'message.created') return
-      try {
-        handlers.onMessage(JSON.parse(event.data) as Message)
-      } catch {
-        handlers.onError(new Error('invalid conversation event'))
-      }
+      dispatchEvent(event.event || 'message', event.data || '', handlers)
     },
-    onError: handlers.onError,
+    onError: (error) => {
+      handlers.onThinking?.(false)
+      handlers.onError(error)
+    },
   })
 
   return async () => {

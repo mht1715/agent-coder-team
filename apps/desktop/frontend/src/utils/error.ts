@@ -1,4 +1,4 @@
-﻿import axios from 'axios'
+import axios from 'axios'
 import { ApiError } from '../api/client'
 
 type Translate = (key: string) => string
@@ -10,6 +10,8 @@ const codeKeys: Record<string, string> = {
   'auth.username_exists': 'errors.usernameExists',
   'project.not_found': 'errors.notFound',
   'project.name_exists': 'errors.projectNameExists',
+  'agent.plan_exists': 'errors.planExists',
+  'agent.not_found': 'errors.notFound',
   'validation.invalid_request': 'errors.validation',
   internal_error: 'errors.unknown',
 }

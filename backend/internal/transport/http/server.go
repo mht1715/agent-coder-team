@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	agentapp "backend/internal/application/agent"
 	authapp "backend/internal/application/auth"
 	conversationapp "backend/internal/application/conversation"
 	profileapp "backend/internal/application/profile"
@@ -35,13 +36,15 @@ func New(
 	conversationSvc *conversationapp.Service,
 	profileSvc *profileapp.Service,
 	workspaceSvc *workspaceapp.Service,
+	agentSvc *agentapp.Service,
 ) *Server {
 	healthHandler := handler.NewHealthHandler(healthSvc, cfg.App.Name, cfg.App.Version, cfg.App.Environment)
 	authHandler := handler.NewAuthHandler(authSvc)
 	projectHandler := handler.NewProjectHandler(projectSvc)
-	conversationHandler := handler.NewConversationHandler(conversationSvc)
+	conversationHandler := handler.NewConversationHandler(conversationSvc, agentSvc)
 	profileHandler := handler.NewProfileHandler(profileSvc)
 	workspaceHandler := handler.NewWorkspaceHandler(workspaceSvc)
+	agentHandler := handler.NewAgentHandler(agentSvc)
 
 	router := gin.New()
 	corsConfig := cors.Config{
@@ -88,6 +91,19 @@ func New(
 	protected.GET("/conversations/:id/messages", conversationHandler.ListMessages)
 	protected.POST("/conversations/:id/messages", conversationHandler.SendMessage)
 	protected.GET("/conversations/:id/stream", conversationHandler.Stream)
+
+	protected.GET("/projects/:id/requirement", agentHandler.GetRequirement)
+	protected.POST("/projects/:id/requirement/generate", agentHandler.GenerateRequirement)
+	protected.PATCH("/projects/:id/requirement", agentHandler.UpdateRequirement)
+	protected.POST("/projects/:id/requirement/approve", agentHandler.ApproveRequirement)
+	protected.GET("/projects/:id/tasks", agentHandler.ListTasks)
+	protected.POST("/projects/:id/tasks/generate", agentHandler.GeneratePlan)
+	protected.POST("/tasks/:id/transition", agentHandler.TransitionTask)
+	protected.POST("/tasks/:id/request-execution", agentHandler.RequestTaskExecution)
+	protected.GET("/projects/:id/approvals", agentHandler.ListApprovals)
+	protected.POST("/approvals/:id/decision", agentHandler.DecideApproval)
+	protected.GET("/projects/:id/runs", agentHandler.ListRuns)
+	protected.POST("/runs/:id/finish", agentHandler.FinishRun)
 
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	return &Server{

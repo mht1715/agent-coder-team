@@ -85,7 +85,9 @@ transport -> application -> domain <- infrastructure
 
 ### 核心实体
 
-`users`、`user_preferences`、`devices`、`sessions`、`projects`、`conversations`、`messages`、`conversation_digests`、`agent_profiles`、`agent_runs`、`tasks`、`task_dependencies`、`events`、`artifacts`、`approvals`、`tool_invocations`、`model_usage`、`memory_items`、`knowledge_documents`、`knowledge_chunks`、`sandbox_runs`、`audit_logs`、`stack_profiles`、`tech_packs`。
+已实现：`users`、`sessions`、`projects`、`conversations`、`messages`、`project_profiles`、`requirement_documents`、`tasks`、`task_dependencies`、`agent_runs`、`approvals`。
+
+规划中：`user_preferences`、`devices`、`conversation_digests`、`agent_profiles`、`events`、`artifacts`、`tool_invocations`、`model_usage`、`memory_items`、`knowledge_documents`、`knowledge_chunks`、`sandbox_runs`、`audit_logs`、`tech_packs`。
 
 关键字段补充：
 
@@ -130,14 +132,29 @@ transport -> application -> domain <- infrastructure
 要求：支持 `Last-Event-ID` 断线续传、项目级订阅、心跳、敏感字段脱敏。
 ## 5. Agent 编排
 
-### 状态机
+### 主 Agent 核心闭环
 
 ```text
-Draft -> Clarifying -> ReadyForPlan -> Planning -> PlanReview
-      -> Queued -> Running -> Review -> Accepted
-                  |-> Blocked -> Running
-                  |-> Failed -> Queued
+用户消息 -> 主 Agent 流式回复 -> 需求澄清
+        -> PRD 草稿 -> 用户批准
+        -> 任务 DAG -> 计划审批 -> 可执行任务
+        -> 执行审批 -> 运行记录 -> 验收 -> 完成
 ```
+
+主 Agent 当前的确定性规划器负责从对话、项目画像和 PRD 生成需求文档与任务 DAG。模型网关接入后保持相同用例边界，只替换生成器。
+
+### 任务状态机
+
+```text
+backlog -> ready -> in_progress -> review -> done
+   |         |          |            |
+   +------ blocked <----+------------+
+   +------ cancelled
+```
+
+- 任务只有在全部依赖为 `done` 时才从 `backlog` 进入 `ready`。
+- `ready -> in_progress` 必须经过任务执行审批。
+- 执行完成记录会进入 `review`，验收通过后进入 `done`。
 
 ### 任务信封
 

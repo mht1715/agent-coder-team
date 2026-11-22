@@ -80,3 +80,91 @@ export interface WorkspaceBrowseResult {
   entries: WorkspaceDirectoryEntry[]
   truncated: boolean
 }
+
+export interface RequirementDocument {
+  id: string
+  project_id: string
+  title: string
+  content_md: string
+  status: 'draft' | 'approved'
+  version: number
+  generated_by: string
+  approved_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export type TaskStatus =
+  | 'backlog'
+  | 'ready'
+  | 'in_progress'
+  | 'review'
+  | 'done'
+  | 'blocked'
+  | 'cancelled'
+
+export interface Task {
+  id: string
+  project_id: string
+  task_key: string
+  title: string
+  description: string
+  acceptance_criteria: string
+  agent_role: string
+  priority: string
+  status: TaskStatus
+  position: number
+  dependencies: string[]
+  started_at?: string
+  completed_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface Approval {
+  id: string
+  project_id: string
+  task_id?: string
+  run_id?: string
+  kind: 'plan_review' | 'task_execution'
+  status: 'pending' | 'approved' | 'rejected'
+  title: string
+  description: string
+  requested_by_type: string
+  decided_by?: string
+  decision_note?: string
+  decided_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface RunLog {
+  at: string
+  level: string
+  message: string
+}
+
+export interface AgentRun {
+  id: string
+  project_id: string
+  task_id?: string
+  conversation_id?: string
+  kind: 'requirement' | 'planning' | 'execution'
+  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'
+  title: string
+  input_summary?: string
+  output_summary?: string
+  logs: RunLog[]
+  started_at?: string
+  finished_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface MessageDelta {
+  message_id: string
+  conversation_id: string
+  sender_type: Message['sender_type']
+  delta: string
+  created_at: string
+}

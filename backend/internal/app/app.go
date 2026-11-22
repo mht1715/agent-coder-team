@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"backend/internal/analyzer"
+	agentapp "backend/internal/application/agent"
 	"backend/internal/application/auth"
 	"backend/internal/application/conversation"
 	"backend/internal/application/profile"
@@ -93,8 +94,19 @@ func New(cfg *config.SysConfig) (*App, error) {
 		repositories.Messages,
 		eventBroker,
 	)
+	agentService := agentapp.NewService(
+		repositories.Projects,
+		repositories.Profiles,
+		repositories.Conversations,
+		repositories.Messages,
+		repositories.Requirements,
+		repositories.Tasks,
+		repositories.Approvals,
+		repositories.Runs,
+		eventBroker,
+	)
 	healthSvc := health.New(db, redisClient)
-	server := httpserver.New(cfg, healthSvc, authService, projectService, conversationService, profileService, workspaceService)
+	server := httpserver.New(cfg, healthSvc, authService, projectService, conversationService, profileService, workspaceService, agentService)
 
 	return &App{
 		cfg:    cfg,

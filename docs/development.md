@@ -272,7 +272,10 @@ docker compose exec backend go test ./...
 - 项目创建、列表、详情和更新。
 - 项目群聊、消息分页、消息发送和 SSE 实时事件。
 - 项目工作目录校验、技术栈识别和项目画像。
-- Wails 3 桌面端骨架：登录、项目列表、项目群聊、项目画像和主题切换。
+- Wails 3 桌面端：登录、项目列表、主 Agent 群聊、需求、任务看板、审批与执行记录。
+- 主 Agent 流式回复、PRD 草稿生成和需求批准。
+- 任务 DAG 生成、依赖解锁、任务状态机和计划审批。
+- 任务执行审批、运行队列和执行记录。
 - 基础单元测试。
 
 可用端点：
@@ -296,12 +299,25 @@ GET /api/v1/projects/:id/conversations
 GET /api/v1/conversations/:id/messages
 POST /api/v1/conversations/:id/messages
 GET /api/v1/conversations/:id/stream
+GET /api/v1/projects/:id/requirement
+POST /api/v1/projects/:id/requirement/generate
+PATCH /api/v1/projects/:id/requirement
+POST /api/v1/projects/:id/requirement/approve
+GET /api/v1/projects/:id/tasks
+POST /api/v1/projects/:id/tasks/generate
+POST /api/v1/tasks/:id/transition
+POST /api/v1/tasks/:id/request-execution
+GET /api/v1/projects/:id/approvals
+POST /api/v1/approvals/:id/decision
+GET /api/v1/projects/:id/runs
+POST /api/v1/runs/:id/finish
 ```
 
 下一步：
 
-1. 主 Agent 消息流与任务模型。
-2. M0 技术验证：Docker 沙箱、pgvector、Tailscale/TLS。
+1. Docker 沙箱执行器与真实代码变更记录。
+2. pgvector 索引、上下文预算和长期记忆。
+3. Tailscale 移动端派活与设备配对。
 
 ## 12. 开发账号
 
@@ -378,7 +394,10 @@ apps/desktop/bin/
 
 - 登录 / 首次创建本地账号。
 - 项目列表和创建项目。
-- 项目群聊、消息发送和 Wails Events 实时消息。
+- 主 Agent 群聊、流式回复和 Wails Events 实时消息。
+- 需求与 PRD 生成、编辑和批准。
+- 任务 DAG、看板、依赖解锁和审批。
+- 审批中心、执行记录和任务验收。
 - 项目画像查看与扫描。
 - 深色 / 浅色 / 跟随系统主题。
 - 中文 / 英文切换。

@@ -25,7 +25,7 @@ type Broker struct {
 func NewBroker() *Broker {
 	return &Broker{
 		subscribers: make(map[string]map[chan Event]struct{}),
-		bufferSize:  64,
+		bufferSize:  256,
 	}
 }
 

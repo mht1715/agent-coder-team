@@ -53,3 +53,29 @@ type ProjectProfileRepository interface {
 	Upsert(ctx context.Context, profile *ProjectProfile) error
 	FindByProjectID(ctx context.Context, projectID uuid.UUID) (*ProjectProfile, error)
 }
+
+type RequirementRepository interface {
+	Upsert(ctx context.Context, requirement *RequirementDocument) error
+	FindByProjectID(ctx context.Context, projectID uuid.UUID) (*RequirementDocument, error)
+}
+
+type TaskRepository interface {
+	ReplacePlan(ctx context.Context, projectID uuid.UUID, tasks []Task) error
+	ListByProject(ctx context.Context, projectID uuid.UUID) ([]Task, error)
+	FindByIDAndOwner(ctx context.Context, taskID, ownerID uuid.UUID) (*Task, error)
+	Update(ctx context.Context, task *Task) error
+}
+
+type ApprovalRepository interface {
+	Create(ctx context.Context, approval *Approval) error
+	Update(ctx context.Context, approval *Approval) error
+	FindByIDAndOwner(ctx context.Context, approvalID, ownerID uuid.UUID) (*Approval, error)
+	ListByProject(ctx context.Context, projectID uuid.UUID, status string) ([]Approval, error)
+}
+
+type AgentRunRepository interface {
+	Create(ctx context.Context, run *AgentRun) error
+	Update(ctx context.Context, run *AgentRun) error
+	FindByIDAndOwner(ctx context.Context, runID, ownerID uuid.UUID) (*AgentRun, error)
+	ListByProject(ctx context.Context, projectID uuid.UUID) ([]AgentRun, error)
+}

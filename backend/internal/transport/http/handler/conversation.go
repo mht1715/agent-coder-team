@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	agentapp "backend/internal/application/agent"
 	conversationapp "backend/internal/application/conversation"
 	"backend/internal/domain"
 	"backend/internal/transport/http/middleware"
@@ -17,6 +18,7 @@ import (
 
 type ConversationHandler struct {
 	conversations *conversationapp.Service
+	agent         *agentapp.Service
 }
 
 type conversationsResponse struct {
@@ -34,8 +36,8 @@ type sendMessageRequest struct {
 	ContentFormat string `json:"content_format"`
 }
 
-func NewConversationHandler(conversations *conversationapp.Service) *ConversationHandler {
-	return &ConversationHandler{conversations: conversations}
+func NewConversationHandler(conversations *conversationapp.Service, agent *agentapp.Service) *ConversationHandler {
+	return &ConversationHandler{conversations: conversations, agent: agent}
 }
 
 func (h *ConversationHandler) ListProjectConversations(c *gin.Context) {
@@ -131,6 +133,9 @@ func (h *ConversationHandler) SendMessage(c *gin.Context) {
 	if err != nil {
 		writeConversationError(c, err)
 		return
+	}
+	if h.agent != nil {
+		h.agent.QueueUserMessageReply(user.ID, conversationID, message.ID)
 	}
 	c.JSON(http.StatusCreated, message)
 }
