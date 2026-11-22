@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"backend/internal/domain"
+	"backend/internal/workspace"
 
 	"github.com/google/uuid"
 )
@@ -31,11 +32,12 @@ type UpdateInput struct {
 }
 
 type Service struct {
-	projects domain.ProjectRepository
+	projects   domain.ProjectRepository
+	workspaces *workspace.Validator
 }
 
-func NewService(projects domain.ProjectRepository) *Service {
-	return &Service{projects: projects}
+func NewService(projects domain.ProjectRepository, workspaces *workspace.Validator) *Service {
+	return &Service{projects: projects, workspaces: workspaces}
 }
 
 func (s *Service) Create(ctx context.Context, ownerID uuid.UUID, input CreateInput) (*domain.Project, error) {
@@ -43,16 +45,16 @@ func (s *Service) Create(ctx context.Context, ownerID uuid.UUID, input CreateInp
 	if name == "" || len(name) > 128 {
 		return nil, fmt.Errorf("%w: project name is required and must be at most 128 chars", ErrValidation)
 	}
-	workingDir := strings.TrimSpace(input.WorkingDir)
-	if workingDir == "" || len(workingDir) > 4096 {
-		return nil, fmt.Errorf("%w: working directory is required", ErrValidation)
-	}
 	mode := input.ProjectMode
 	if mode == "" {
 		mode = domain.ProjectModeNew
 	}
 	if mode != domain.ProjectModeNew && mode != domain.ProjectModeExisting {
 		return nil, fmt.Errorf("%w: project mode must be new or existing", ErrValidation)
+	}
+	workingDir, err := s.workspaces.ValidatePath(input.WorkingDir, mode == domain.ProjectModeExisting)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrValidation, err.Error())
 	}
 	language := input.OutputLanguage
 	if language == "" {
@@ -106,19 +108,19 @@ func (s *Service) Update(ctx context.Context, ownerID, projectID uuid.UUID, inpu
 	if input.Description != nil {
 		project.Description = strings.TrimSpace(*input.Description)
 	}
-	if input.WorkingDir != nil {
-		workingDir := strings.TrimSpace(*input.WorkingDir)
-		if workingDir == "" || len(workingDir) > 4096 {
-			return nil, fmt.Errorf("%w: working directory is required", ErrValidation)
-		}
-		project.WorkingDir = workingDir
-	}
 	if input.ProjectMode != nil {
 		mode := *input.ProjectMode
 		if mode != domain.ProjectModeNew && mode != domain.ProjectModeExisting {
 			return nil, fmt.Errorf("%w: project mode must be new or existing", ErrValidation)
 		}
 		project.ProjectMode = mode
+	}
+	if input.WorkingDir != nil {
+		workingDir, err := s.workspaces.ValidatePath(*input.WorkingDir, project.ProjectMode == domain.ProjectModeExisting)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %s", ErrValidation, err.Error())
+		}
+		project.WorkingDir = workingDir
 	}
 	if input.OutputLanguage != nil && strings.TrimSpace(*input.OutputLanguage) != "" {
 		project.OutputLanguage = strings.TrimSpace(*input.OutputLanguage)

@@ -228,3 +228,66 @@ func messageToModel(m *domain.Message) messageModel {
 		CreatedAt:      m.CreatedAt,
 	}
 }
+
+type projectProfileModel struct {
+	ProjectID       uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	PrimaryLanguage string         `gorm:"size:64;not null;default:''"`
+	Languages       datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'"`
+	Frameworks      datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'"`
+	PackageManager  string         `gorm:"size:64;not null;default:''"`
+	BuildCommand    string         `gorm:"not null;default:''"`
+	TestCommand     string         `gorm:"not null;default:''"`
+	FormatCommand   string         `gorm:"not null;default:''"`
+	FileCount       int            `gorm:"not null;default:0"`
+	TopLevel        datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'"`
+	Truncated       bool           `gorm:"not null;default:false"`
+	DetectedAt      time.Time      `gorm:"not null"`
+	UpdatedAt       time.Time      `gorm:"not null"`
+}
+
+func (projectProfileModel) TableName() string { return "project_profiles" }
+
+func projectProfileFromModel(m projectProfileModel) *domain.ProjectProfile {
+	languages := []string{}
+	frameworks := []string{}
+	topLevel := []string{}
+	_ = json.Unmarshal(m.Languages, &languages)
+	_ = json.Unmarshal(m.Frameworks, &frameworks)
+	_ = json.Unmarshal(m.TopLevel, &topLevel)
+	return &domain.ProjectProfile{
+		ProjectID:       m.ProjectID,
+		PrimaryLanguage: m.PrimaryLanguage,
+		Languages:       languages,
+		Frameworks:      frameworks,
+		PackageManager:  m.PackageManager,
+		BuildCommand:    m.BuildCommand,
+		TestCommand:     m.TestCommand,
+		FormatCommand:   m.FormatCommand,
+		FileCount:       m.FileCount,
+		TopLevel:        topLevel,
+		Truncated:       m.Truncated,
+		DetectedAt:      m.DetectedAt,
+		UpdatedAt:       m.UpdatedAt,
+	}
+}
+
+func projectProfileToModel(p *domain.ProjectProfile) projectProfileModel {
+	languages, _ := json.Marshal(p.Languages)
+	frameworks, _ := json.Marshal(p.Frameworks)
+	topLevel, _ := json.Marshal(p.TopLevel)
+	return projectProfileModel{
+		ProjectID:       p.ProjectID,
+		PrimaryLanguage: p.PrimaryLanguage,
+		Languages:       datatypes.JSON(languages),
+		Frameworks:      datatypes.JSON(frameworks),
+		PackageManager:  p.PackageManager,
+		BuildCommand:    p.BuildCommand,
+		TestCommand:     p.TestCommand,
+		FormatCommand:   p.FormatCommand,
+		FileCount:       p.FileCount,
+		TopLevel:        datatypes.JSON(topLevel),
+		Truncated:       p.Truncated,
+		DetectedAt:      p.DetectedAt,
+		UpdatedAt:       p.UpdatedAt,
+	}
+}

@@ -9,6 +9,7 @@ import (
 
 	authapp "backend/internal/application/auth"
 	conversationapp "backend/internal/application/conversation"
+	profileapp "backend/internal/application/profile"
 	projectapp "backend/internal/application/project"
 	"backend/internal/config"
 	"backend/internal/health"
@@ -30,11 +31,13 @@ func New(
 	authSvc *authapp.Service,
 	projectSvc *projectapp.Service,
 	conversationSvc *conversationapp.Service,
+	profileSvc *profileapp.Service,
 ) *Server {
 	healthHandler := handler.NewHealthHandler(healthSvc, cfg.App.Name, cfg.App.Version, cfg.App.Environment)
 	authHandler := handler.NewAuthHandler(authSvc)
 	projectHandler := handler.NewProjectHandler(projectSvc)
 	conversationHandler := handler.NewConversationHandler(conversationSvc)
+	profileHandler := handler.NewProfileHandler(profileSvc)
 
 	router := gin.New()
 	router.Use(
@@ -60,6 +63,8 @@ func New(
 	protected.GET("/projects", projectHandler.List)
 	protected.GET("/projects/:id", projectHandler.Get)
 	protected.PATCH("/projects/:id", projectHandler.Update)
+	protected.GET("/projects/:id/profile", profileHandler.Get)
+	protected.POST("/projects/:id/profile/scan", profileHandler.Scan)
 	protected.GET("/projects/:id/conversations", conversationHandler.ListProjectConversations)
 	protected.GET("/conversations/:id/messages", conversationHandler.ListMessages)
 	protected.POST("/conversations/:id/messages", conversationHandler.SendMessage)

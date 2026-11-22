@@ -48,3 +48,8 @@ type MessageRepository interface {
 	Create(ctx context.Context, message *Message) error
 	ListByConversation(ctx context.Context, conversationID uuid.UUID, before *time.Time, limit int) ([]Message, error)
 }
+
+type ProjectProfileRepository interface {
+	Upsert(ctx context.Context, profile *ProjectProfile) error
+	FindByProjectID(ctx context.Context, projectID uuid.UUID) (*ProjectProfile, error)
+}

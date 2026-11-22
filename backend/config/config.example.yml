@@ -60,6 +60,10 @@ security:
     - https://localhost
     - https://127.0.0.1
 
+workspace:
+  allowed_roots:
+    - /workspaces
+  max_scan_files: 20000
 scheduler:
   timezone: Asia/Shanghai
   auto_start_weekdays:

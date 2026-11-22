@@ -19,6 +19,7 @@ type SysConfig struct {
 	Sandbox   SandboxConfig   `mapstructure:"sandbox"`
 	Auth      AuthConfig      `mapstructure:"auth"`
 	Security  SecurityConfig  `mapstructure:"security"`
+	Workspace WorkspaceConfig `mapstructure:"workspace"`
 	Scheduler SchedulerConfig `mapstructure:"scheduler"`
 	I18n      I18nConfig      `mapstructure:"i18n"`
 }
@@ -88,6 +89,11 @@ type AuthConfig struct {
 type SecurityConfig struct {
 	ForceHTTPS     bool     `mapstructure:"force_https"`
 	AllowedOrigins []string `mapstructure:"allowed_origins"`
+}
+
+type WorkspaceConfig struct {
+	AllowedRoots []string `mapstructure:"allowed_roots"`
+	MaxScanFiles int      `mapstructure:"max_scan_files"`
 }
 
 type SchedulerConfig struct {
@@ -177,6 +183,12 @@ func (c *SysConfig) Validate() error {
 	}
 	if c.Redis.Port < 1 || c.Redis.Port > 65535 {
 		return fmt.Errorf("redis.port must be between 1 and 65535")
+	}
+	if len(c.Workspace.AllowedRoots) == 0 {
+		return fmt.Errorf("workspace.allowed_roots must contain at least one path")
+	}
+	if c.Workspace.MaxScanFiles <= 0 {
+		c.Workspace.MaxScanFiles = 20000
 	}
 	if c.Vector.Dimension <= 0 {
 		return fmt.Errorf("vector.dimension must be positive")

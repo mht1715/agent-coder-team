@@ -22,6 +22,10 @@ func validConfig() SysConfig {
 			Host: "redis",
 			Port: 6379,
 		},
+		Workspace: WorkspaceConfig{
+			AllowedRoots: []string{"/workspaces"},
+			MaxScanFiles: 20000,
+		},
 		Vector: VectorConfig{
 			Dimension: 1536,
 		},

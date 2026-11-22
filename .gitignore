@@ -34,6 +34,8 @@ go.work.sum
 /backend/config/config.*.local.yml
 !backend/config/config.example.yml
 /backend/tmp/
+/workspaces/*
+!/workspaces/.gitkeep
 
 # Editor/IDE
 .idea/

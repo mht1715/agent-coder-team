@@ -60,6 +60,7 @@ services:
         exec go run ./cmd/app
     volumes:
       - ./backend:/app
+      - ./workspaces:/workspaces
       - go-mod-cache:/go/pkg/mod
       - go-build-cache:/root/.cache/go-build
     ports:

@@ -12,6 +12,7 @@ type Repositories struct {
 	Projects      domain.ProjectRepository
 	Conversations domain.ConversationRepository
 	Messages      domain.MessageRepository
+	Profiles      domain.ProjectProfileRepository
 }
 
 func NewRepositories(db *gorm.DB) *Repositories {
@@ -21,5 +22,6 @@ func NewRepositories(db *gorm.DB) *Repositories {
 		Projects:      NewProjectRepository(db),
 		Conversations: NewConversationRepository(db),
 		Messages:      NewMessageRepository(db),
+		Profiles:      NewProjectProfileRepository(db),
 	}
 }

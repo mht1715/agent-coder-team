@@ -95,6 +95,7 @@ CONFIG_PATH=/app/config/config.yml
 - `database`：PostgreSQL 连接。
 - `redis`：Redis 连接。
 - `queue`：Asynq 队列和并发数。
+- `workspace`：允许的项目工作目录根路径和扫描文件上限。
 - `vector`：pgvector 配置。
 - `sandbox`：Docker 沙箱限制。
 - `auth`：会话有效期。
@@ -267,6 +268,7 @@ docker compose exec backend go test ./...
 - 本地账号、登录、刷新令牌、退出。
 - 项目创建、列表、详情和更新。
 - 项目群聊、消息分页、消息发送和 SSE 实时事件。
+- 项目工作目录校验、技术栈识别和项目画像。
 - 基础单元测试。
 
 可用端点：
@@ -284,6 +286,8 @@ POST /api/v1/projects
 GET /api/v1/projects
 GET /api/v1/projects/:id
 PATCH /api/v1/projects/:id
+GET /api/v1/projects/:id/profile
+POST /api/v1/projects/:id/profile/scan
 GET /api/v1/projects/:id/conversations
 GET /api/v1/conversations/:id/messages
 POST /api/v1/conversations/:id/messages
@@ -292,6 +296,6 @@ GET /api/v1/conversations/:id/stream
 
 下一步：
 
-1. 项目工作目录检测和项目画像。
-2. Wails 桌面端骨架。
+1. Wails 桌面端骨架。
+2. 主 Agent 消息流与任务模型。
 3. M0 技术验证：Docker 沙箱、pgvector、Tailscale/TLS。

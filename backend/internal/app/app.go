@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"backend/internal/analyzer"
 	"backend/internal/application/auth"
 	"backend/internal/application/conversation"
+	"backend/internal/application/profile"
 	"backend/internal/application/project"
 	"backend/internal/config"
 	"backend/internal/event"
@@ -17,6 +19,7 @@ import (
 	"backend/internal/infrastructure/postgres"
 	"backend/internal/security"
 	httpserver "backend/internal/transport/http"
+	"backend/internal/workspace"
 
 	"github.com/rs/zerolog/log"
 )
@@ -68,7 +71,19 @@ func New(cfg *config.SysConfig) (*App, error) {
 		accessTTL,
 		refreshTTL,
 	)
-	projectService := project.NewService(repositories.Projects)
+	workspaceValidator, err := workspace.NewValidator(cfg.Workspace)
+	if err != nil {
+		_ = redisClient.Close()
+		_ = db.Close()
+		return nil, err
+	}
+	projectService := project.NewService(repositories.Projects, workspaceValidator)
+	profileService := profile.NewService(
+		repositories.Projects,
+		repositories.Profiles,
+		workspaceValidator,
+		analyzer.NewDetector(workspaceValidator.MaxScanFiles()),
+	)
 	eventBroker := event.NewBroker()
 	conversationService := conversation.NewService(
 		repositories.Projects,
@@ -77,7 +92,7 @@ func New(cfg *config.SysConfig) (*App, error) {
 		eventBroker,
 	)
 	healthSvc := health.New(db, redisClient)
-	server := httpserver.New(cfg, healthSvc, authService, projectService, conversationService)
+	server := httpserver.New(cfg, healthSvc, authService, projectService, conversationService, profileService)
 
 	return &App{
 		cfg:    cfg,
