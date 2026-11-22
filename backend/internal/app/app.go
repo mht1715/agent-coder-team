@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"backend/internal/application/auth"
+	"backend/internal/application/conversation"
 	"backend/internal/application/project"
 	"backend/internal/config"
+	"backend/internal/event"
 	"backend/internal/health"
 	"backend/internal/infrastructure/cache"
 	"backend/internal/infrastructure/migrate"
@@ -67,8 +69,15 @@ func New(cfg *config.SysConfig) (*App, error) {
 		refreshTTL,
 	)
 	projectService := project.NewService(repositories.Projects)
+	eventBroker := event.NewBroker()
+	conversationService := conversation.NewService(
+		repositories.Projects,
+		repositories.Conversations,
+		repositories.Messages,
+		eventBroker,
+	)
 	healthSvc := health.New(db, redisClient)
-	server := httpserver.New(cfg, healthSvc, authService, projectService)
+	server := httpserver.New(cfg, healthSvc, authService, projectService, conversationService)
 
 	return &App{
 		cfg:    cfg,

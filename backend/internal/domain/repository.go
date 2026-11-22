@@ -36,3 +36,15 @@ type ProjectRepository interface {
 	FindByIDAndOwner(ctx context.Context, id, ownerID uuid.UUID) (*Project, error)
 	Update(ctx context.Context, project *Project) error
 }
+
+type ConversationRepository interface {
+	FindOrCreateProjectGroup(ctx context.Context, projectID uuid.UUID) (*Conversation, error)
+	FindByIDAndOwner(ctx context.Context, conversationID, ownerID uuid.UUID) (*Conversation, error)
+	ListByProjectAndOwner(ctx context.Context, projectID, ownerID uuid.UUID) ([]Conversation, error)
+	TouchLastMessage(ctx context.Context, conversationID uuid.UUID, at time.Time) error
+}
+
+type MessageRepository interface {
+	Create(ctx context.Context, message *Message) error
+	ListByConversation(ctx context.Context, conversationID uuid.UUID, before *time.Time, limit int) ([]Message, error)
+}

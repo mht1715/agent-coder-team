@@ -1,11 +1,13 @@
 package persistence
 
 import (
+	"encoding/json"
 	"time"
 
 	"backend/internal/domain"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -137,5 +139,92 @@ func projectToModel(p *domain.Project) projectModel {
 		OutputLanguage: p.OutputLanguage,
 		CreatedAt:      p.CreatedAt,
 		UpdatedAt:      p.UpdatedAt,
+	}
+}
+
+type conversationModel struct {
+	ID            uuid.UUID `gorm:"type:uuid;primaryKey"`
+	ProjectID     uuid.UUID `gorm:"type:uuid;not null;index"`
+	Type          string    `gorm:"size:32;not null"`
+	Title         string    `gorm:"size:255;not null;default:''"`
+	LastMessageAt *time.Time
+	CreatedAt     time.Time `gorm:"not null"`
+	UpdatedAt     time.Time `gorm:"not null"`
+}
+
+func (conversationModel) TableName() string { return "conversations" }
+
+type messageModel struct {
+	ID             uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	ConversationID uuid.UUID      `gorm:"type:uuid;not null;index"`
+	SenderType     string         `gorm:"size:32;not null"`
+	SenderID       *uuid.UUID     `gorm:"type:uuid"`
+	ContentRaw     string         `gorm:"not null"`
+	ContentFormat  string         `gorm:"size:16;not null;default:'markdown'"`
+	Summary        string         `gorm:"not null;default:''"`
+	Metadata       datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'"`
+	CreatedAt      time.Time      `gorm:"not null"`
+}
+
+func (messageModel) TableName() string { return "messages" }
+
+func conversationFromModel(m conversationModel) *domain.Conversation {
+	return &domain.Conversation{
+		ID:            m.ID,
+		ProjectID:     m.ProjectID,
+		Type:          m.Type,
+		Title:         m.Title,
+		LastMessageAt: m.LastMessageAt,
+		CreatedAt:     m.CreatedAt,
+		UpdatedAt:     m.UpdatedAt,
+	}
+}
+
+func conversationToModel(c *domain.Conversation) conversationModel {
+	return conversationModel{
+		ID:            c.ID,
+		ProjectID:     c.ProjectID,
+		Type:          c.Type,
+		Title:         c.Title,
+		LastMessageAt: c.LastMessageAt,
+		CreatedAt:     c.CreatedAt,
+		UpdatedAt:     c.UpdatedAt,
+	}
+}
+
+func messageFromModel(m messageModel) *domain.Message {
+	metadata := map[string]any{}
+	if len(m.Metadata) > 0 {
+		_ = json.Unmarshal(m.Metadata, &metadata)
+	}
+	return &domain.Message{
+		ID:             m.ID,
+		ConversationID: m.ConversationID,
+		SenderType:     m.SenderType,
+		SenderID:       m.SenderID,
+		Content:        m.ContentRaw,
+		ContentFormat:  m.ContentFormat,
+		Summary:        m.Summary,
+		Metadata:       metadata,
+		CreatedAt:      m.CreatedAt,
+	}
+}
+
+func messageToModel(m *domain.Message) messageModel {
+	metadata := m.Metadata
+	if metadata == nil {
+		metadata = map[string]any{}
+	}
+	raw, _ := json.Marshal(metadata)
+	return messageModel{
+		ID:             m.ID,
+		ConversationID: m.ConversationID,
+		SenderType:     m.SenderType,
+		SenderID:       m.SenderID,
+		ContentRaw:     m.Content,
+		ContentFormat:  m.ContentFormat,
+		Summary:        m.Summary,
+		Metadata:       datatypes.JSON(raw),
+		CreatedAt:      m.CreatedAt,
 	}
 }

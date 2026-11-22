@@ -266,6 +266,7 @@ docker compose exec backend go test ./...
 - 数据库迁移和基础表。
 - 本地账号、登录、刷新令牌、退出。
 - 项目创建、列表、详情和更新。
+- 项目群聊、消息分页、消息发送和 SSE 实时事件。
 - 基础单元测试。
 
 可用端点：
@@ -283,11 +284,14 @@ POST /api/v1/projects
 GET /api/v1/projects
 GET /api/v1/projects/:id
 PATCH /api/v1/projects/:id
+GET /api/v1/projects/:id/conversations
+GET /api/v1/conversations/:id/messages
+POST /api/v1/conversations/:id/messages
+GET /api/v1/conversations/:id/stream
 ```
 
 下一步：
 
-1. 项目群聊和消息存储。
-2. 项目工作目录检测和项目画像。
-3. Wails 桌面端骨架。
-4. M0 技术验证：Docker 沙箱、pgvector、Tailscale/TLS。
+1. 项目工作目录检测和项目画像。
+2. Wails 桌面端骨架。
+3. M0 技术验证：Docker 沙箱、pgvector、Tailscale/TLS。
