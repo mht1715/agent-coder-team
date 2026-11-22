@@ -5,15 +5,9 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { Bot, Cpu, RefreshCw, Send, UserRound } from 'lucide-vue-next'
 import { getProject } from '../api/projects'
-import {
-  conversationStreamUrl,
-  listMessages,
-  listProjectConversations,
-  sendMessage as sendMessageApi,
-} from '../api/conversations'
+import { listMessages, listProjectConversations, sendMessage as sendMessageApi } from '../api/conversations'
 import { getProjectProfile, scanProjectProfile } from '../api/profile'
-import { tokenStorage } from '../api/token-storage'
-import { connectSSE } from '../utils/sse'
+import { subscribeConversationStream, type ConversationStreamCleanup } from '../utils/conversation-stream'
 import { translateApiError } from '../utils/error'
 import type { Conversation, Message, Project, ProjectProfile } from '../types/api'
 
@@ -30,7 +24,8 @@ const sending = ref(false)
 const scanning = ref(false)
 const draft = ref('')
 const messageList = ref<HTMLElement | null>(null)
-let streamController: AbortController | null = null
+let streamCleanup: ConversationStreamCleanup | null = null
+let lastStreamErrorAt = 0
 let hasLoaded = false
 
 async function load() {
@@ -43,7 +38,7 @@ async function load() {
       const page = await listMessages(conversation.value.id, undefined, 50)
       messages.value = [...page.items].reverse()
       await scrollToBottom()
-      startRealtime()
+      await startRealtime()
     }
     await loadProfile()
   } catch (error) {
@@ -67,37 +62,37 @@ async function loadProfile() {
   }
 }
 
-function startRealtime() {
-  if (!conversation.value) return
-  streamController?.abort()
-  streamController = new AbortController()
-  const controller = streamController
-  const url = conversationStreamUrl(conversation.value.id)
-  const token = tokenStorage.getAccess()
-  if (!token) return
+async function stopRealtime() {
+  const cleanup = streamCleanup
+  streamCleanup = null
+  if (cleanup) {
+    await cleanup()
+  }
+}
 
-  void connectSSE({
-    url,
-    token,
-    signal: controller.signal,
-    onEvent: async (event) => {
-      if (event.event !== 'message.created') return
-      try {
-        const message = JSON.parse(event.data) as Message
+async function startRealtime() {
+  if (!conversation.value) return
+  await stopRealtime()
+  const conversationID = conversation.value.id
+  try {
+    streamCleanup = await subscribeConversationStream(conversationID, {
+      onMessage: async (message) => {
         if (!messages.value.some((item) => item.id === message.id)) {
           messages.value.push(message)
           await scrollToBottom()
         }
-      } catch {
-        // Ignore malformed events; the next history fetch will recover.
-      }
-    },
-    onError: () => {
-      if (!controller.signal.aborted) {
-        ElMessage.warning(t('chat.disconnected'))
-      }
-    },
-  })
+      },
+      onError: () => {
+        const now = Date.now()
+        if (now - lastStreamErrorAt > 5000) {
+          lastStreamErrorAt = now
+          ElMessage.warning(t('chat.disconnected'))
+        }
+      },
+    })
+  } catch (error) {
+    ElMessage.error(translateApiError(error, t))
+  }
 }
 
 async function send() {
@@ -156,7 +151,7 @@ async function refreshOnActivate() {
     if (conversation.value) {
       const page = await listMessages(conversation.value.id, undefined, 50)
       messages.value = [...page.items].reverse()
-      startRealtime()
+      void startRealtime()
     }
     await loadProfile()
   } catch (error) {
@@ -168,8 +163,8 @@ onMounted(load)
 onActivated(() => {
   void refreshOnActivate()
 })
-onDeactivated(() => streamController?.abort())
-onBeforeUnmount(() => streamController?.abort())
+onDeactivated(() => { void stopRealtime() })
+onBeforeUnmount(() => { void stopRealtime() })
 </script>
 
 <template>

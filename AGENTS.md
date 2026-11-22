@@ -14,7 +14,7 @@ Agent Coder Team 是一款本地优先的 "Agent 软件公司"：
 
 ## 2. 当前仓库状态
 
-- 当前已有 Go 后端基础骨架、数据库迁移、本地认证、项目 CRUD、项目群聊、消息 SSE、项目画像、Docker 开发环境和健康检查。
+- 当前已有 Go 后端基础骨架、数据库迁移、本地认证、项目 CRUD、项目群聊、消息 SSE、项目画像、Wails 3 桌面端骨架、Docker 开发环境和健康检查。
 - 不要提前创建空的 `apps/desktop`、`apps/mobile` 或前端代码。
 - 不要假设未实现的功能已经存在。
 - 需要新增目录时，先确认它服务于当前里程碑。
@@ -38,7 +38,7 @@ Agent Coder Team 是一款本地优先的 "Agent 软件公司"：
 4. 外部服务必须通过接口适配。
 5. 事务边界放在 application 层。
 6. 不使用 GORM AutoMigrate 代替正式迁移。
-7. 桌面端通过 Wails IPC 访问核心服务，不开放本地明文 HTTP。
+7. 桌面 WebView 通过 Wails IPC 访问核心服务，不直接访问本地 HTTP。
 8. 移动端 API 必须使用 HTTPS/TLS。
 9. 所有 Agent 代码执行必须进 Docker 沙箱。
 10. 不把整个仓库、全部聊天记录或密钥放入模型上下文。
@@ -55,6 +55,17 @@ docker compose exec backend go test ./...
 docker compose exec backend go vet ./...
 docker compose exec backend gofmt -w .
 docker compose down
+docker compose exec backend go run ./cmd/seed
+```
+
+本地开发账号：`admin / admin12345`。
+
+桌面端：
+
+```bash
+cd apps/desktop
+wails3 dev
+wails3 build
 ```
 
 验证 Compose：

@@ -29,7 +29,7 @@ flowchart TB
 ### 运行方式
 
 - 单进程内嵌服务：Wails 桌面应用启动时，在同一个 Go 进程中启动核心引擎。
-- 桌面端通过 Wails IPC/事件访问核心服务，不开放本地明文 HTTP。
+- 桌面端通过 Wails IPC/事件访问核心服务，WebView 不直接访问本地 HTTP。
 - 移动端通过 Tailscale 私网访问 HTTPS API。
 - Docker 用于开发环境和代码执行沙箱，不要求用户手工安装 PostgreSQL、Redis 等开发依赖。
 
@@ -240,8 +240,8 @@ Draft -> Clarifying -> ReadyForPlan -> Planning -> PlanReview
 - API Key、设备私钥放 OS Keychain。
 - 移动设备一次性配对，使用设备公钥签名和短期令牌。
 - 远程只监听 Tailscale 接口，TLS 1.3 + 证书固定，可选 mTLS。
-- 桌面使用 Wails IPC，不开放本地明文 HTTP。
-- 不提供 HTTP 回退，SSE/WebSocket 同样走 TLS。
+- 桌面 WebView 使用 Wails IPC，不直接访问本地 HTTP。
+- 生产桌面不向 WebView 提供 HTTP 回退；浏览器调试回退仅用于本地开发。移动端 SSE/WebSocket 同样使用 TLS。
 - 代码只在非 root Docker 沙箱中执行。
 - 沙箱默认断网、只读根文件系统、限制 CPU/内存/PID/时间。
 - 只挂载任务 worktree，不挂载 Docker Socket、用户主目录和密钥。

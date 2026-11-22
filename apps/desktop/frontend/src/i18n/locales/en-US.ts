@@ -137,8 +137,11 @@ export default {
     accountHelp: 'The local account is scoped to this workspace.',
     signedInAs: 'Signed in as',
     apiMode: 'Local transport',
-    apiModeValue: 'Development mode: HTTP API. Secure Wails IPC is next.',
-    developmentMode: 'Development',
+    apiModeValue: 'Development mode: HTTP API',
+    apiModeWails: 'Desktop secure IPC: the page reaches the core service through the in-process Wails channel. Login tokens are never exposed to the frontend.',
+    apiModeHttp: 'HTTP development mode: browser debugging only. Not used by the production desktop app.',
+    desktopIpc: 'Wails IPC',
+    developmentMode: 'HTTP development',
   },
   errors: {
     network: 'Cannot reach the local service. Make sure the backend is running.',

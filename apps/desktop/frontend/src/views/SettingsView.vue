@@ -1,16 +1,18 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
 import { useThemeStore, type ThemeMode } from '../stores/theme'
+import { isWailsRuntime } from '../api/client'
 import { setLocale, type SupportedLocale } from '../i18n'
 
 const { t, locale } = useI18n()
 const auth = useAuthStore()
 const theme = useThemeStore()
 const router = useRouter()
+const usingWailsIPC = isWailsRuntime()
 
 const themeMode = computed({
   get: () => theme.mode,
@@ -83,8 +85,10 @@ async function logout() {
           </el-descriptions-item>
           <el-descriptions-item :label="t('settings.apiMode')">
             <div class="transport-row">
-              <span>{{ t('settings.apiModeValue') }}</span>
-              <el-tag type="warning" effect="plain">{{ t('settings.developmentMode') }}</el-tag>
+              <span>{{ usingWailsIPC ? t('settings.apiModeWails') : t('settings.apiModeHttp') }}</span>
+              <el-tag :type="usingWailsIPC ? 'success' : 'warning'" effect="plain">
+                {{ usingWailsIPC ? t('settings.desktopIpc') : t('settings.developmentMode') }}
+              </el-tag>
             </div>
           </el-descriptions-item>
         </el-descriptions>

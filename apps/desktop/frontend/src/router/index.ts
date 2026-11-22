@@ -1,5 +1,4 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
-import { tokenStorage } from '../api/token-storage'
 import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
@@ -29,7 +28,7 @@ router.beforeEach(async (to) => {
   if (!auth.initialized) {
     await auth.loadMe()
   }
-  const authenticated = Boolean(tokenStorage.getAccess())
+  const authenticated = auth.isAuthenticated
   if (!to.meta.public && !authenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }

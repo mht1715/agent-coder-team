@@ -22,6 +22,9 @@ func main() {
 		},
 	})
 
+	desktopAPI := NewDesktopAPIFromEnvironment(app)
+	app.RegisterService(application.NewService(desktopAPI))
+
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:     "Agent Coder Team",
 		Width:     1200,

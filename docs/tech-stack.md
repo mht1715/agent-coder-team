@@ -114,7 +114,7 @@
 |---|---|
 | 桌面壳 | Wails 3.x，精确版本写入 `wails.json` 和 `go.mod` |
 | 桌面 UI | Vue 3 + Element Plus |
-| 桌面通信 | Wails IPC/事件，不开放本地明文 HTTP |
+| 桌面通信 | Wails IPC/事件；WebView 不直接访问 HTTP |
 | 移动壳 | 优先 Wails 移动端 |
 | 移动备选 | Capacitor，仅在 M0 证明 Wails 移动端不可用时启用 |
 | 移动 UI | Vue 3 + Vant |

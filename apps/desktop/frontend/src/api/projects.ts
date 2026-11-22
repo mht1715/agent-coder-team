@@ -1,4 +1,4 @@
-import api from './client'
+﻿import { apiRequest } from './client'
 import type { Project } from '../types/api'
 
 export interface CreateProjectInput {
@@ -10,16 +10,14 @@ export interface CreateProjectInput {
 }
 
 export async function listProjects(): Promise<Project[]> {
-  const { data } = await api.get<{ items: Project[] }>('/projects')
-  return data.items
+  const response = await apiRequest<{ items: Project[] }>('GET', '/projects')
+  return response.items
 }
 
 export async function createProject(input: CreateProjectInput): Promise<Project> {
-  const { data } = await api.post<Project>('/projects', input)
-  return data
+  return apiRequest<Project>('POST', '/projects', input)
 }
 
 export async function getProject(id: string): Promise<Project> {
-  const { data } = await api.get<Project>(`/projects/${id}`)
-  return data
+  return apiRequest<Project>('GET', `/projects/${id}`)
 }

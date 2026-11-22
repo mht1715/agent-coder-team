@@ -135,8 +135,11 @@ export default {
     accountHelp: '本地账号仅用于当前工作区。',
     signedInAs: '当前账号',
     apiMode: '本地传输',
-    apiModeValue: '开发模式：HTTP API，后续切换为安全 Wails IPC',
-    developmentMode: '开发模式',
+    apiModeValue: '开发模式：HTTP API',
+    apiModeWails: '桌面安全 IPC：页面只通过 Wails 进程内通道访问核心服务，登录令牌不会暴露给前端。',
+    apiModeHttp: 'HTTP 开发模式：仅用于浏览器调试，生产桌面端不使用。',
+    desktopIpc: 'Wails IPC',
+    developmentMode: 'HTTP 开发模式',
   },  errors: {
     network: '无法连接本地服务，请确认后端已启动。',
     unauthorized: '登录状态已失效，请重新登录。',

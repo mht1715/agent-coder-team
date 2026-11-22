@@ -15,7 +15,7 @@ export interface TokenPair {
 
 export interface AuthResponse {
   user: User
-  tokens: TokenPair
+  tokens?: TokenPair
 }
 
 export interface Project {

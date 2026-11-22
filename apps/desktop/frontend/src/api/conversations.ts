@@ -1,9 +1,12 @@
-import api from './client'
+﻿import { apiRequest } from './client'
 import type { Conversation, Message } from '../types/api'
 
 export async function listProjectConversations(projectId: string): Promise<Conversation[]> {
-  const { data } = await api.get<{ items: Conversation[] }>(`/projects/${projectId}/conversations`)
-  return data.items
+  const response = await apiRequest<{ items: Conversation[] }>(
+    'GET',
+    `/projects/${projectId}/conversations`,
+  )
+  return response.items
 }
 
 export interface MessagePage {
@@ -17,10 +20,9 @@ export async function listMessages(
   before?: string,
   limit = 50,
 ): Promise<MessagePage> {
-  const { data } = await api.get<MessagePage>(`/conversations/${conversationId}/messages`, {
+  return apiRequest<MessagePage>('GET', `/conversations/${conversationId}/messages`, undefined, {
     params: { before, limit },
   })
-  return data
 }
 
 export async function sendMessage(
@@ -28,11 +30,10 @@ export async function sendMessage(
   content: string,
   contentFormat = 'markdown',
 ): Promise<Message> {
-  const { data } = await api.post<Message>(`/conversations/${conversationId}/messages`, {
+  return apiRequest<Message>('POST', `/conversations/${conversationId}/messages`, {
     content,
     content_format: contentFormat,
   })
-  return data
 }
 
 export function conversationStreamUrl(conversationId: string): string {

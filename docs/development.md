@@ -300,9 +300,9 @@ GET /api/v1/conversations/:id/stream
 
 下一步：
 
-1. Wails IPC 安全传输适配器。
-2. 主 Agent 消息流与任务模型。
-3. M0 技术验证：Docker 沙箱、pgvector、Tailscale/TLS。
+1. 主 Agent 消息流与任务模型。
+2. M0 技术验证：Docker 沙箱、pgvector、Tailscale/TLS。
+
 ## 12. 开发账号
 
 本地开发默认账号由 seed 命令创建：
@@ -349,13 +349,15 @@ cd apps/desktop
 wails3 dev
 ```
 
-桌面端 API 地址在 `.env.development` 和 `.env.production` 中配置：
+桌面端 WebView 通过 Wails IPC 调用 Go 桥接层。桥接层默认访问：
 
 ```text
 http://127.0.0.1:18080/api/v1
 ```
 
-Vite 同时保留 `/api` 代理，用于浏览器开发模式。后端开发环境允许本地 CORS。
+可通过环境变量 `ACT_CORE_API_URL` 覆盖。登录令牌只保存在 Wails Go 进程内存中，不会下发到 WebView；Go 层负责鉴权、刷新和实时事件转发。
+
+浏览器调试模式仍可通过 `.env.development` 和 Vite `/api` 代理访问后端。
 
 构建桌面端：
 
@@ -370,13 +372,13 @@ wails3 build
 apps/desktop/bin/
 ```
 
-当前桌面端使用开发期 HTTP API 适配器。下一阶段会替换为 Wails IPC 安全适配器，生产环境不开放本地明文 HTTP。
+当前桌面端使用 Wails IPC 安全适配器。WebView 不直接访问 HTTP，项目消息实时事件由 Go 桥接层通过 Wails Events 推送。
 
 桌面端当前页面：
 
 - 登录 / 首次创建本地账号。
 - 项目列表和创建项目。
-- 项目群聊、消息发送和 SSE 实时消息。
+- 项目群聊、消息发送和 Wails Events 实时消息。
 - 项目画像查看与扫描。
 - 深色 / 浅色 / 跟随系统主题。
 - 中文 / 英文切换。

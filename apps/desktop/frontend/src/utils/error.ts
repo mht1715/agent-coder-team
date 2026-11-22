@@ -1,4 +1,5 @@
 ﻿import axios from 'axios'
+import { ApiError } from '../api/client'
 
 type Translate = (key: string) => string
 
@@ -14,6 +15,16 @@ const codeKeys: Record<string, string> = {
 }
 
 export function translateApiError(error: unknown, t: Translate): string {
+  if (error instanceof ApiError) {
+    const key = codeKeys[error.code]
+    if (key) return t(key)
+    if (error.status === 401) return t('errors.unauthorized')
+    if (error.status === 403) return t('errors.forbidden')
+    if (error.status === 404) return t('errors.notFound')
+    if (error.status === 400) return t('errors.validation')
+    return t('errors.unknown')
+  }
+
   if (axios.isAxiosError(error)) {
     if (!error.response) {
       return t('errors.network')

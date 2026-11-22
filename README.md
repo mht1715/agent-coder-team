@@ -33,6 +33,34 @@ docker compose exec backend go test ./...
 docker compose down
 ```
 
+## 桌面端开发
+
+安装 Wails 3 CLI：
+
+```bash
+go install github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0
+```
+
+启动后端后，在 `apps/desktop` 运行：
+
+```bash
+wails3 dev
+```
+
+当前桌面端包含登录、项目列表、项目群聊、SSE 消息、项目画像和主题切换。
+
+本地开发账号：
+
+```text
+admin / admin12345
+```
+
+数据库重置后可执行：
+
+```bash
+docker compose exec backend go run ./cmd/seed
+```
+
 ## 文档
 
 - [产品范围与决策](./docs/README.md)
