@@ -1,0 +1,9 @@
+.git
+.gitignore
+.idea
+.vscode
+bin
+tmp
+*.log
+config/config.local.yml
+config/config.*.local.yml

@@ -1,0 +1,75 @@
+# Copy this file to config.yml for local development.
+# config.yml is ignored by Git and should not be committed.
+app:
+  name: agent-coder-team
+  version: 0.1.0
+  environment: development
+  gin_mode: debug
+
+server:
+  host: 0.0.0.0
+  port: 18080
+  read_timeout: 15s
+  write_timeout: 60s
+  shutdown_timeout: 10s
+
+database:
+  host: postgres
+  port: 5432
+  user: act
+  password: act_dev_password
+  name: agent_coder_team
+  sslmode: disable
+  max_open_conns: 20
+  max_idle_conns: 5
+  conn_max_lifetime: 30m
+
+redis:
+  host: redis
+  port: 6379
+  password: ""
+  db: 0
+  pool_size: 10
+
+queue:
+  driver: asynq
+  concurrency: 4
+  redis_db: 1
+
+vector:
+  driver: pgvector
+  dimension: 1536
+
+sandbox:
+  driver: docker
+  host: ""
+  network: none
+  cpus: 2
+  memory_mb: 2048
+  pids_limit: 256
+  timeout_seconds: 1800
+
+auth:
+  session_ttl: 24h
+  refresh_ttl: 720h
+
+security:
+  force_https: true
+  allowed_origins:
+    - https://localhost
+    - https://127.0.0.1
+
+scheduler:
+  timezone: Asia/Shanghai
+  auto_start_weekdays:
+    - "18:00-24:00"
+    - "00:00-09:00"
+  auto_start_holidays:
+    - "00:00-24:00"
+  allow_manual_override: true
+
+i18n:
+  default_locale: zh-CN
+  supported_locales:
+    - zh-CN
+    - en-US

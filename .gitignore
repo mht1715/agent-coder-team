@@ -28,7 +28,13 @@ go.work.sum
 
 # env file
 .env
+.env.local
+/backend/config/config.yml
+/backend/config/config.local.yml
+/backend/config/config.*.local.yml
+!backend/config/config.example.yml
+/backend/tmp/
 
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+.vscode/
