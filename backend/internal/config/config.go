@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -147,4 +148,42 @@ func resolveConfigPath() (string, error) {
 		}
 	}
 	return "", fmt.Errorf("config file not found; set CONFIG_PATH or create config/config.yml")
+}
+
+func (c *SysConfig) Validate() error {
+	if c.App.Name == "" {
+		return fmt.Errorf("app.name is required")
+	}
+	switch c.App.GinMode {
+	case "debug", "release", "test":
+	default:
+		return fmt.Errorf("app.gin_mode must be debug, release or test")
+	}
+	if c.Server.Host == "" {
+		return fmt.Errorf("server.host is required")
+	}
+	if c.Server.Port < 1 || c.Server.Port > 65535 {
+		return fmt.Errorf("server.port must be between 1 and 65535")
+	}
+	if c.Database.Host == "" || c.Database.User == "" || c.Database.Name == "" {
+		return fmt.Errorf("database.host, database.user and database.name are required")
+	}
+	if c.Database.Port < 1 || c.Database.Port > 65535 {
+		return fmt.Errorf("database.port must be between 1 and 65535")
+	}
+	if c.Redis.Host == "" {
+		return fmt.Errorf("redis.host is required")
+	}
+	if c.Redis.Port < 1 || c.Redis.Port > 65535 {
+		return fmt.Errorf("redis.port must be between 1 and 65535")
+	}
+	if c.Vector.Dimension <= 0 {
+		return fmt.Errorf("vector.dimension must be positive")
+	}
+	if c.Scheduler.Timezone != "" {
+		if _, err := time.LoadLocation(c.Scheduler.Timezone); err != nil {
+			return fmt.Errorf("scheduler.timezone is invalid: %w", err)
+		}
+	}
+	return nil
 }

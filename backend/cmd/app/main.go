@@ -3,14 +3,12 @@ package main
 import (
 	"context"
 	_ "embed"
-	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
+	"backend/internal/app"
 	"backend/internal/config"
 	"backend/internal/logger"
 
@@ -43,56 +41,22 @@ func main() {
 		fmt.Println(banner)
 	}
 
-	r := gin.New()
-	r.Use(gin.Recovery())
-
-	r.GET("/healthz", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-	})
-
-	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-	srv := &http.Server{
-		Addr:              addr,
-		Handler:           r,
-		ReadHeaderTimeout: 5 * time.Second,
+	application, err := app.New(cfg)
+	if err != nil {
+		log.Error().Err(err).Msg("initialize application failed")
+		os.Exit(1)
 	}
+	defer func() {
+		if err := application.Close(); err != nil {
+			log.Error().Err(err).Msg("close application failed")
+		}
+	}()
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	errCh := make(chan error, 1)
-	go func() {
-		log.Info().
-			Str("addr", addr).
-			Str("gin_mode", gin.Mode()).
-			Msg("HTTP server started")
-
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			errCh <- err
-		}
-		close(errCh)
-	}()
-
-	select {
-	case err := <-errCh:
-		if err != nil {
-			log.Error().Err(err).Str("addr", addr).Msg("HTTP server stopped unexpectedly")
-			os.Exit(1)
-		}
-	case <-ctx.Done():
-		log.Info().Msg("shutdown signal received")
-	}
-
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Error().Err(err).Msg("graceful shutdown timed out; forcing close")
-		if closeErr := srv.Close(); closeErr != nil {
-			log.Error().Err(closeErr).Msg("force close failed")
-		}
+	if err := application.Run(ctx); err != nil {
+		log.Error().Err(err).Msg("application stopped with error")
 		os.Exit(1)
 	}
-
-	log.Info().Msg("HTTP server stopped")
 }

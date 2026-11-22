@@ -14,7 +14,7 @@ Agent Coder Team 是一款本地优先的 "Agent 软件公司"：
 
 ## 2. 当前仓库状态
 
-- 当前只有 Go 后端骨架、Docker 开发环境和文档。
+- 当前已有 Go 后端基础骨架、Docker 开发环境、配置、日志、PostgreSQL/Redis 连接和健康检查。
 - 不要提前创建空的 `apps/desktop`、`apps/mobile` 或前端代码。
 - 不要假设未实现的功能已经存在。
 - 需要新增目录时，先确认它服务于当前里程碑。

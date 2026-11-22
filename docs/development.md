@@ -256,10 +256,27 @@ docker compose exec backend go test ./...
 
 ## 11. 当前阶段
 
-当前仓库只有后端骨架、Docker 开发环境和文档。下一步是 M0 技术验证：
+已完成：
 
-1. Wails 桌面 IPC。
-2. Docker 沙箱执行测试。
-3. pgvector 检索。
-4. Tailscale + HTTPS + 设备配对。
-5. 用假 Agent 跑通需求和任务闭环。
+- Docker 开发环境、PostgreSQL/pgvector、Redis。
+- 配置加载、启动校验、结构化日志。
+- PostgreSQL 和 Redis 连接、就绪检查。
+- 请求 ID 和访问日志中间件。
+- 优雅关闭。
+- 基础单元测试。
+
+可用端点：
+
+```text
+GET /healthz
+GET /readyz
+GET /api/v1/meta
+```
+
+下一步：
+
+1. 数据库迁移和基础表。
+2. 本地账号、会话和认证中间件。
+3. 项目创建、导入和项目列表。
+4. 项目群聊和消息存储。
+5. M0 技术验证：Wails IPC、Docker 沙箱、pgvector、Tailscale/TLS。
