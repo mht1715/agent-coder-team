@@ -36,6 +36,8 @@ type taskModel struct {
 	Priority           string    `gorm:"size:16;not null;default:'medium'"`
 	Status             string    `gorm:"size:32;not null;default:'backlog'"`
 	Position           int       `gorm:"not null;default:0"`
+	ExecutionCommand   string    `gorm:"not null;default:''"`
+	ExecutionImage     string    `gorm:"size:255;not null;default:''"`
 	StartedAt          *time.Time
 	CompletedAt        *time.Time
 	CreatedAt          time.Time `gorm:"not null"`
@@ -71,15 +73,18 @@ type approvalModel struct {
 func (approvalModel) TableName() string { return "approvals" }
 
 type agentRunModel struct {
-	ID             uuid.UUID      `gorm:"type:uuid;primaryKey"`
-	ProjectID      uuid.UUID      `gorm:"type:uuid;not null;index"`
-	TaskID         *uuid.UUID     `gorm:"type:uuid"`
-	ConversationID *uuid.UUID     `gorm:"type:uuid"`
-	Kind           string         `gorm:"size:32;not null"`
-	Status         string         `gorm:"size:32;not null;default:'queued'"`
-	Title          string         `gorm:"size:255;not null"`
-	InputSummary   string         `gorm:"not null;default:''"`
-	OutputSummary  string         `gorm:"not null;default:''"`
+	ID             uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	ProjectID      uuid.UUID  `gorm:"type:uuid;not null;index"`
+	TaskID         *uuid.UUID `gorm:"type:uuid"`
+	ConversationID *uuid.UUID `gorm:"type:uuid"`
+	Kind           string     `gorm:"size:32;not null"`
+	Status         string     `gorm:"size:32;not null;default:'queued'"`
+	Title          string     `gorm:"size:255;not null"`
+	InputSummary   string     `gorm:"not null;default:''"`
+	OutputSummary  string     `gorm:"not null;default:''"`
+	Executor       string     `gorm:"size:32;not null;default:''"`
+	ExitCode       *int
+	ChangedFiles   datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'"`
 	Logs           datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'"`
 	StartedAt      *time.Time
 	FinishedAt     *time.Time
@@ -134,6 +139,8 @@ func taskFromModel(m taskModel, dependencies []uuid.UUID) *domain.Task {
 		Priority:           m.Priority,
 		Status:             m.Status,
 		Position:           m.Position,
+		ExecutionCommand:   m.ExecutionCommand,
+		ExecutionImage:     m.ExecutionImage,
 		Dependencies:       dependencies,
 		StartedAt:          m.StartedAt,
 		CompletedAt:        m.CompletedAt,
@@ -154,6 +161,8 @@ func taskToModel(t *domain.Task) taskModel {
 		Priority:           t.Priority,
 		Status:             t.Status,
 		Position:           t.Position,
+		ExecutionCommand:   t.ExecutionCommand,
+		ExecutionImage:     t.ExecutionImage,
 		StartedAt:          t.StartedAt,
 		CompletedAt:        t.CompletedAt,
 		CreatedAt:          t.CreatedAt,
@@ -207,6 +216,13 @@ func agentRunFromModel(m agentRunModel) *domain.AgentRun {
 	if logs == nil {
 		logs = []domain.RunLog{}
 	}
+	changedFiles := []string{}
+	if len(m.ChangedFiles) > 0 {
+		_ = json.Unmarshal(m.ChangedFiles, &changedFiles)
+	}
+	if changedFiles == nil {
+		changedFiles = []string{}
+	}
 	return &domain.AgentRun{
 		ID:             m.ID,
 		ProjectID:      m.ProjectID,
@@ -217,6 +233,9 @@ func agentRunFromModel(m agentRunModel) *domain.AgentRun {
 		Title:          m.Title,
 		InputSummary:   m.InputSummary,
 		OutputSummary:  m.OutputSummary,
+		Executor:       m.Executor,
+		ExitCode:       m.ExitCode,
+		ChangedFiles:   changedFiles,
 		Logs:           logs,
 		StartedAt:      m.StartedAt,
 		FinishedAt:     m.FinishedAt,
@@ -230,7 +249,12 @@ func agentRunToModel(r *domain.AgentRun) agentRunModel {
 	if logs == nil {
 		logs = []domain.RunLog{}
 	}
+	changedFiles := r.ChangedFiles
+	if changedFiles == nil {
+		changedFiles = []string{}
+	}
 	raw, _ := json.Marshal(logs)
+	changedRaw, _ := json.Marshal(changedFiles)
 	return agentRunModel{
 		ID:             r.ID,
 		ProjectID:      r.ProjectID,
@@ -241,6 +265,9 @@ func agentRunToModel(r *domain.AgentRun) agentRunModel {
 		Title:          r.Title,
 		InputSummary:   r.InputSummary,
 		OutputSummary:  r.OutputSummary,
+		Executor:       r.Executor,
+		ExitCode:       r.ExitCode,
+		ChangedFiles:   datatypes.JSON(changedRaw),
 		Logs:           datatypes.JSON(raw),
 		StartedAt:      r.StartedAt,
 		FinishedAt:     r.FinishedAt,

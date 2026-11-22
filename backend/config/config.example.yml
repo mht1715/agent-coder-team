@@ -49,6 +49,18 @@ sandbox:
   memory_mb: 2048
   pids_limit: 256
   timeout_seconds: 1800
+  workspace_anchor: ""
+  container_workspace_root: ""
+  max_concurrent: 1
+  max_output_bytes: 200000
+  default_image: alpine:3.20
+  images:
+    - alpine:3.20
+    - golang:1.27-alpine
+    - node:22-alpine
+    - python:3.13-alpine
+    - eclipse-temurin:21-jdk-alpine
+    - mcr.microsoft.com/dotnet/sdk:8.0-alpine
 
 auth:
   session_ttl: 24h

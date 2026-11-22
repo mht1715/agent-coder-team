@@ -46,8 +46,12 @@ export async function transitionTask(
   return apiRequest<Task>('POST', `/tasks/${taskId}/transition`, { status, note })
 }
 
-export async function requestTaskExecution(taskId: string): Promise<Approval> {
-  return apiRequest<Approval>('POST', `/tasks/${taskId}/request-execution`)
+export async function requestTaskExecution(
+  taskId: string,
+  command = '',
+  image = '',
+): Promise<Approval> {
+  return apiRequest<Approval>('POST', `/tasks/${taskId}/request-execution`, { command, image })
 }
 
 export async function listApprovals(

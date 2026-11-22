@@ -114,6 +114,8 @@ export interface Task {
   priority: string
   status: TaskStatus
   position: number
+  execution_command?: string
+  execution_image?: string
   dependencies: string[]
   started_at?: string
   completed_at?: string
@@ -154,6 +156,9 @@ export interface AgentRun {
   title: string
   input_summary?: string
   output_summary?: string
+  executor?: string
+  exit_code?: number
+  changed_files: string[]
   logs: RunLog[]
   started_at?: string
   finished_at?: string

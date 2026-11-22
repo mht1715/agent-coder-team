@@ -34,6 +34,9 @@ type AgentRun struct {
 	Title          string     `json:"title"`
 	InputSummary   string     `json:"input_summary,omitempty"`
 	OutputSummary  string     `json:"output_summary,omitempty"`
+	Executor       string     `json:"executor,omitempty"`
+	ExitCode       *int       `json:"exit_code,omitempty"`
+	ChangedFiles   []string   `json:"changed_files"`
 	Logs           []RunLog   `json:"logs"`
 	StartedAt      *time.Time `json:"started_at,omitempty"`
 	FinishedAt     *time.Time `json:"finished_at,omitempty"`

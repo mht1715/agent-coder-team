@@ -12,6 +12,7 @@
 - PRD 生成、编辑和批准。
 - 任务 DAG 生成、审批和状态机。
 - 项目任务看板、审批中心和执行记录。
+- Docker 沙箱任务执行、实时日志、退出码和代码变更文件记录。
 - Docker 开发环境与 PostgreSQL/Redis 依赖。
 
 ## 快速开始
@@ -51,7 +52,7 @@ go install github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0
 wails3 dev
 ```
 
-当前桌面端包含登录、项目列表、主 Agent 群聊、流式回复、项目画像、需求与 PRD、任务看板、审批与执行记录和主题切换。
+当前桌面端包含登录、项目列表、主 Agent 群聊、流式回复、项目画像、需求与 PRD、任务看板、审批与执行记录、Docker 沙箱执行日志和主题切换。
 
 本地开发账号：
 
@@ -83,6 +84,10 @@ docker compose exec backend go run ./cmd/seed
 - 远程：Tailscale + HTTPS + 证书固定
 - Agent 目标技术栈：Go、Vue、React、Java、Python、Node、.NET、uni-app
 
+## 当前限制
+
+主 Agent 仍使用本地确定性规划器，尚未接入模型网关。Docker 沙箱已经可以执行审批后的测试/构建命令并记录日志、退出码和工作区变更，但还没有由模型生成代码修改。
+
 ## 当前优先级
 
-先完成 M0 技术验证，再进入业务开发。详见 [产品范围与决策](./docs/README.md)。
+下一步接入可替换模型网关与执行 Agent，再做 pgvector 检索、上下文预算和长期记忆。详见 [产品范围与决策](./docs/README.md)。

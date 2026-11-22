@@ -27,6 +27,8 @@ type Task struct {
 	Priority           string      `json:"priority"`
 	Status             string      `json:"status"`
 	Position           int         `json:"position"`
+	ExecutionCommand   string      `json:"execution_command,omitempty"`
+	ExecutionImage     string      `json:"execution_image,omitempty"`
 	Dependencies       []uuid.UUID `json:"dependencies"`
 	StartedAt          *time.Time  `json:"started_at,omitempty"`
 	CompletedAt        *time.Time  `json:"completed_at,omitempty"`

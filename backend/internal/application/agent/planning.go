@@ -244,6 +244,7 @@ func dependenciesDone(task domain.Task, allTasks []domain.Task) bool {
 func (s *Service) RequestTaskExecution(
 	ctx context.Context,
 	ownerID, taskID uuid.UUID,
+	command, image string,
 ) (*domain.Approval, error) {
 	task, err := s.tasks.FindByIDAndOwner(ctx, taskID, ownerID)
 	if err != nil {
@@ -261,6 +262,16 @@ func (s *Service) RequestTaskExecution(
 			return nil, fmt.Errorf("%w: task already has a pending execution approval", ErrValidation)
 		}
 	}
+	command, image, err = s.resolveExecutionSpec(ctx, task.ProjectID, command, image)
+	if err != nil {
+		return nil, err
+	}
+	task.ExecutionCommand = command
+	task.ExecutionImage = image
+	task.UpdatedAt = time.Now().UTC()
+	if err := s.tasks.Update(ctx, task); err != nil {
+		return nil, err
+	}
 	now := time.Now().UTC()
 	id, err := uuid.NewV7()
 	if err != nil {
@@ -273,7 +284,7 @@ func (s *Service) RequestTaskExecution(
 		Kind:            domain.ApprovalKindTaskExecution,
 		Status:          domain.ApprovalStatusPending,
 		Title:           "批准开始执行：" + task.Title,
-		Description:     task.Description,
+		Description:     fmt.Sprintf("执行镜像：%s\n执行命令：%s\n\n%s", image, command, task.Description),
 		RequestedByType: domain.SenderTypeMainAgent,
 		CreatedAt:       now,
 		UpdatedAt:       now,
@@ -331,6 +342,7 @@ func (s *Service) DecideApproval(
 	}
 
 	approval.Status = domain.ApprovalStatusApproved
+	var queuedRun *domain.AgentRun
 	switch approval.Kind {
 	case domain.ApprovalKindPlanReview:
 		if err := s.activateTaskPlan(ctx, approval.ProjectID); err != nil {
@@ -351,6 +363,7 @@ func (s *Service) DecideApproval(
 		if runErr != nil {
 			return nil, runErr
 		}
+		queuedRun = run
 		approval.RunID = &run.ID
 		task.Status = domain.TaskStatusInProgress
 		task.StartedAt = &now
@@ -368,6 +381,9 @@ func (s *Service) DecideApproval(
 		return nil, err
 	}
 	s.publishProject(approval.ProjectID, "approval.updated", approval)
+	if queuedRun != nil {
+		s.queueExecution(ownerID, queuedRun.ID)
+	}
 	return approval, nil
 }
 
@@ -396,14 +412,23 @@ func (s *Service) activateTaskPlan(ctx context.Context, projectID uuid.UUID) err
 }
 
 func (s *Service) startExecutionRun(ctx context.Context, task *domain.Task) (*domain.AgentRun, error) {
+	if s.sandbox == nil {
+		return nil, ErrSandboxUnavailable
+	}
+	if strings.TrimSpace(task.ExecutionCommand) == "" || strings.TrimSpace(task.ExecutionImage) == "" {
+		return nil, fmt.Errorf("%w: task has no execution specification", ErrValidation)
+	}
 	now := time.Now().UTC()
 	run := s.newRun(task.ProjectID, domain.AgentRunKindExecution, "执行任务："+task.Title)
 	run.TaskID = &task.ID
 	run.Status = domain.AgentRunStatusQueued
-	run.InputSummary = task.Description
+	run.Executor = s.sandbox.Name()
+	run.StartedAt = nil
+	run.InputSummary = fmt.Sprintf("镜像：%s\n命令：%s", task.ExecutionImage, task.ExecutionCommand)
 	run.Logs = []domain.RunLog{
-		{At: now, Level: "info", Message: "执行审批已通过，任务已进入执行队列"},
-		{At: now, Level: "info", Message: "当前版本仅记录执行审批与运行状态，Docker 沙箱执行器将在后续阶段接入"},
+		{At: now, Level: "info", Message: "执行审批已通过，任务已进入 Docker 沙箱队列"},
+		{At: now, Level: "info", Message: "执行镜像：" + task.ExecutionImage},
+		{At: now, Level: "info", Message: "执行命令：" + task.ExecutionCommand},
 	}
 	if err := s.runs.Create(ctx, run); err != nil {
 		return nil, err
@@ -429,6 +454,9 @@ func (s *Service) FinishRun(
 	}
 	if run.Kind != domain.AgentRunKindExecution {
 		return nil, fmt.Errorf("%w: only execution runs can be completed manually", ErrValidation)
+	}
+	if run.Executor != "" {
+		return nil, fmt.Errorf("%w: this run is managed by the sandbox executor", ErrValidation)
 	}
 	if run.Status != domain.AgentRunStatusQueued && run.Status != domain.AgentRunStatusRunning {
 		return nil, fmt.Errorf("%w: run is already finished", ErrValidation)

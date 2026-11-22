@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"backend/internal/analyzer"
@@ -13,12 +14,15 @@ import (
 	"backend/internal/application/project"
 	workspaceapp "backend/internal/application/workspace"
 	"backend/internal/config"
+	"backend/internal/domain"
 	"backend/internal/event"
 	"backend/internal/health"
 	"backend/internal/infrastructure/cache"
+	gitinfra "backend/internal/infrastructure/git"
 	"backend/internal/infrastructure/migrate"
 	"backend/internal/infrastructure/persistence"
 	"backend/internal/infrastructure/postgres"
+	sandboxinfra "backend/internal/infrastructure/sandbox"
 	"backend/internal/security"
 	httpserver "backend/internal/transport/http"
 	"backend/internal/workspace"
@@ -94,6 +98,16 @@ func New(cfg *config.SysConfig) (*App, error) {
 		repositories.Messages,
 		eventBroker,
 	)
+	var sandboxExecutor domain.SandboxExecutor
+	if strings.EqualFold(cfg.Sandbox.Driver, "docker") {
+		executor, executorErr := sandboxinfra.NewDockerExecutor(cfg.Sandbox)
+		if executorErr != nil {
+			_ = redisClient.Close()
+			_ = db.Close()
+			return nil, executorErr
+		}
+		sandboxExecutor = executor
+	}
 	agentService := agentapp.NewService(
 		repositories.Projects,
 		repositories.Profiles,
@@ -103,6 +117,9 @@ func New(cfg *config.SysConfig) (*App, error) {
 		repositories.Tasks,
 		repositories.Approvals,
 		repositories.Runs,
+		sandboxExecutor,
+		gitinfra.NewChangeTracker(),
+		cfg.Sandbox.MaxConcurrent,
 		eventBroker,
 	)
 	healthSvc := health.New(db, redisClient)

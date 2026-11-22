@@ -1,6 +1,10 @@
 package config
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func validConfig() SysConfig {
 	return SysConfig{
@@ -58,4 +62,28 @@ func TestValidate(t *testing.T) {
 			t.Fatal("expected invalid timezone error")
 		}
 	})
+}
+
+func TestLoadSandboxFromEnvironment(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yml")
+	if err := os.WriteFile(path, []byte("app:\n  name: test\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("CONFIG_PATH", path)
+	t.Setenv("ACT_SANDBOX_WORKSPACE_ANCHOR", "act-workspace-anchor")
+	t.Setenv("ACT_SANDBOX_CONTAINER_WORKSPACE_ROOT", "/workspaces")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	if cfg.Sandbox.WorkspaceAnchor != "act-workspace-anchor" {
+		t.Fatalf("unexpected workspace anchor: %q", cfg.Sandbox.WorkspaceAnchor)
+	}
+	if cfg.Sandbox.ContainerWorkspaceRoot != "/workspaces" {
+		t.Fatalf("unexpected container workspace root: %q", cfg.Sandbox.ContainerWorkspaceRoot)
+	}
+	if cfg.Sandbox.DefaultImage != "alpine:3.20" {
+		t.Fatalf("unexpected default image: %q", cfg.Sandbox.DefaultImage)
+	}
 }

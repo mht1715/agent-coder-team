@@ -12,6 +12,7 @@ const codeKeys: Record<string, string> = {
   'project.name_exists': 'errors.projectNameExists',
   'agent.plan_exists': 'errors.planExists',
   'agent.not_found': 'errors.notFound',
+  'sandbox.unavailable': 'errors.sandboxUnavailable',
   'validation.invalid_request': 'errors.validation',
   internal_error: 'errors.unknown',
 }

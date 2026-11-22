@@ -41,6 +41,11 @@ type finishRunRequest struct {
 	OutputSummary string `json:"output_summary"`
 }
 
+type requestExecutionRequest struct {
+	Command string `json:"command"`
+	Image   string `json:"image"`
+}
+
 type taskListResponse struct {
 	Items []domain.Task `json:"items"`
 }
@@ -212,7 +217,14 @@ func (h *AgentHandler) RequestTaskExecution(c *gin.Context) {
 	if !ok {
 		return
 	}
-	approval, err := h.agent.RequestTaskExecution(c.Request.Context(), user.ID, taskID)
+	var req requestExecutionRequest
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			response.Validation(c, err.Error())
+			return
+		}
+	}
+	approval, err := h.agent.RequestTaskExecution(c.Request.Context(), user.ID, taskID, req.Command, req.Image)
 	if err != nil {
 		writeAgentError(c, err)
 		return
@@ -309,6 +321,8 @@ func writeAgentError(c *gin.Context, err error) {
 		response.Validation(c, err.Error())
 	case errors.Is(err, agentapp.ErrPlanExists):
 		response.Error(c, http.StatusConflict, "agent.plan_exists", "task plan already exists")
+	case errors.Is(err, agentapp.ErrSandboxUnavailable):
+		response.Error(c, http.StatusServiceUnavailable, "sandbox.unavailable", "sandbox execution is unavailable")
 	case errors.Is(err, domain.ErrNotFound):
 		response.Error(c, http.StatusNotFound, "agent.not_found", "project, task, run or approval not found")
 	default:

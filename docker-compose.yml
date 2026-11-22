@@ -49,6 +49,8 @@ services:
     environment:
       CONFIG_PATH: /app/config/config.yml
       TZ: Asia/Shanghai
+      ACT_SANDBOX_WORKSPACE_ANCHOR: act-workspace-anchor
+      ACT_SANDBOX_CONTAINER_WORKSPACE_ROOT: /workspaces
     working_dir: /app
     command:
       - sh
@@ -61,6 +63,7 @@ services:
     volumes:
       - ./backend:/app
       - ./workspaces:/workspaces
+      - /var/run/docker.sock:/var/run/docker.sock
       - go-mod-cache:/go/pkg/mod
       - go-build-cache:/root/.cache/go-build
     ports:
@@ -70,12 +73,22 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      workspace-anchor:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:18080/healthz >/dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 12
       start_period: 20s
+
+  workspace-anchor:
+    image: alpine:3.20
+    container_name: act-workspace-anchor
+    restart: unless-stopped
+    command: ["sh", "-c", "trap : TERM INT; sleep infinity & wait"]
+    volumes:
+      - ./workspaces:/workspaces
 
 volumes:
   pgdata:

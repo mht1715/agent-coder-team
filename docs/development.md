@@ -97,7 +97,7 @@ CONFIG_PATH=/app/config/config.yml
 - `queue`：Asynq 队列和并发数。
 - `workspace`：允许的项目工作目录根路径和扫描文件上限。
 - `vector`：pgvector 配置。
-- `sandbox`：Docker 沙箱限制。
+- `sandbox`：Docker 沙箱限制、允许镜像、并发数、输出上限和开发环境工作区锚点。
 - `auth`：会话有效期。
 - `security`：HTTPS 与 Origin。
 - `scheduler`：开工窗口。
@@ -110,7 +110,40 @@ CONFIG_PATH=/app/config/config.yml
 - `.env` 只用于 Docker Compose 的端口和数据库账号变量，示例见 `.env.example`。
 - 修改端口或数据库密码时，同时修改 `docker-compose.yml` 和配置文件，或使用环境变量覆盖 compose 默认值。
 
-## 6. 常用命令
+## 6. Docker 沙箱执行
+
+开发环境由 `docker compose` 提供三个与沙箱相关的组件：
+
+- `workspace-anchor`：仅挂载 `./workspaces` 的轻量容器，作为项目工作区的共享锚点。
+- 后端容器：安装 Docker CLI，并通过本机 Docker Socket 创建一次性兄弟沙箱。Socket 不会进入沙箱。
+- 沙箱容器：每次任务执行单独创建，使用 `--volumes-from workspace-anchor` 只共享工作区，默认 `network=none`、`cap-drop=ALL`、`no-new-privileges`，并限制 CPU、内存、PID 和超时。
+
+任务执行命令默认从项目画像的测试命令、构建命令推导，镜像按主语言从 `sandbox.images` 白名单选择。执行结果会写入 `agent_runs` 的日志、退出码和变更文件；成功后任务进入 `review`，失败后进入 `blocked`。
+
+本地配置可覆盖：
+
+```yaml
+sandbox:
+  workspace_anchor: act-workspace-anchor
+  container_workspace_root: /workspaces
+  max_concurrent: 1
+  timeout_seconds: 1800
+  default_image: alpine:3.20
+  images:
+    - alpine:3.20
+    - golang:1.27-alpine
+    - node:22-alpine
+```
+
+安全边界：
+
+- 不把 Docker Socket、用户主目录或系统目录挂载进沙箱。
+- 沙箱根文件系统是临时的，项目工作区可写。
+- 沙箱执行的是用户审批过的命令，不是模型生成的任意宿主机命令。
+- 生产环境应把 Docker 访问限制到专用 runner，而不是直接暴露给通用后端进程。
+- 当前服务重启不会自动恢复运行中的沙箱任务，需要将任务重新排队后再执行。
+
+## 7. 常用命令
 
 进入后端容器：
 
@@ -150,7 +183,7 @@ SELECT extname FROM pg_extension WHERE extname = 'vector';
 docker compose exec redis redis-cli
 ```
 
-## 7. 目录结构
+## 8. 目录结构
 
 ```text
 agent-coder-team/
@@ -181,7 +214,7 @@ agent-coder-team/
 
 后续新增前端时，再增加 `apps/desktop` 和 `apps/mobile`，不要提前创建空目录。
 
-## 8. 开发规则
+## 9. 开发规则
 
 1. 先读 `AGENTS.md` 和本文件，再改代码。
 2. 生产代码不做 GORM `AutoMigrate`，数据库变更使用迁移文件。
@@ -194,7 +227,7 @@ agent-coder-team/
 9. 提交前至少运行 `go test ./...` 和 `go vet ./...`。
 10. 文档只维护 `README.md`、`docs/README.md`、`docs/architecture.md`、`docs/development.md` 和 `AGENTS.md`，不要新增零散文档。
 
-## 9. 故障排查
+## 10. 故障排查
 
 ### 端口被占用
 
@@ -238,7 +271,7 @@ docker compose down -v
 docker compose up -d --build
 ```
 
-## 10. Git 工作流
+## 11. Git 工作流
 
 建议提交粒度：
 
@@ -258,7 +291,7 @@ docker compose config --quiet
 docker compose exec backend go test ./...
 ```
 
-## 11. 当前阶段
+## 12. 当前阶段
 
 已完成：
 
@@ -275,7 +308,7 @@ docker compose exec backend go test ./...
 - Wails 3 桌面端：登录、项目列表、主 Agent 群聊、需求、任务看板、审批与执行记录。
 - 主 Agent 流式回复、PRD 草稿生成和需求批准。
 - 任务 DAG 生成、依赖解锁、任务状态机和计划审批。
-- 任务执行审批、运行队列和执行记录。
+- 任务执行审批、Docker 沙箱任务执行、实时日志、退出码和变更文件记录。
 - 基础单元测试。
 
 可用端点：
@@ -315,11 +348,11 @@ POST /api/v1/runs/:id/finish
 
 下一步：
 
-1. Docker 沙箱执行器与真实代码变更记录。
+1. 模型网关、可替换主 Agent 生成器和执行 Agent。
 2. pgvector 索引、上下文预算和长期记忆。
-3. Tailscale 移动端派活与设备配对。
+3. Tailscale 移动端派活、设备配对和 TLS。
 
-## 12. 开发账号
+## 13. 开发账号
 
 本地开发默认账号由 seed 命令创建：
 
@@ -342,7 +375,7 @@ docker compose exec -e SEED_USERNAME=admin -e SEED_PASSWORD=admin12345 backend g
 
 该账号只用于本地开发，不会进入生产环境。
 
-## 13. 桌面端开发
+## 14. 桌面端开发
 
 安装 Wails 3 CLI：
 

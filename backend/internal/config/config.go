@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -72,13 +73,19 @@ type VectorConfig struct {
 }
 
 type SandboxConfig struct {
-	Driver         string  `mapstructure:"driver"`
-	Host           string  `mapstructure:"host"`
-	Network        string  `mapstructure:"network"`
-	CPUs           float64 `mapstructure:"cpus"`
-	MemoryMB       int     `mapstructure:"memory_mb"`
-	PidsLimit      int     `mapstructure:"pids_limit"`
-	TimeoutSeconds int     `mapstructure:"timeout_seconds"`
+	Driver                 string   `mapstructure:"driver"`
+	Host                   string   `mapstructure:"host"`
+	Network                string   `mapstructure:"network"`
+	CPUs                   float64  `mapstructure:"cpus"`
+	MemoryMB               int      `mapstructure:"memory_mb"`
+	PidsLimit              int      `mapstructure:"pids_limit"`
+	TimeoutSeconds         int      `mapstructure:"timeout_seconds"`
+	WorkspaceAnchor        string   `mapstructure:"workspace_anchor"`
+	ContainerWorkspaceRoot string   `mapstructure:"container_workspace_root"`
+	MaxConcurrent          int      `mapstructure:"max_concurrent"`
+	MaxOutputBytes         int      `mapstructure:"max_output_bytes"`
+	DefaultImage           string   `mapstructure:"default_image"`
+	Images                 []string `mapstructure:"images"`
 }
 
 type AuthConfig struct {
@@ -116,8 +123,31 @@ func Load() (*SysConfig, error) {
 
 	v := viper.New()
 	v.SetConfigFile(configPath)
+	v.SetEnvPrefix("ACT")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
 	v.SetDefault("server.port", 18080)
 	v.SetDefault("server.host", "127.0.0.1")
+	v.SetDefault("sandbox.driver", "docker")
+	v.SetDefault("sandbox.host", "")
+	v.SetDefault("sandbox.workspace_anchor", "")
+	v.SetDefault("sandbox.container_workspace_root", "")
+	v.SetDefault("sandbox.network", "none")
+	v.SetDefault("sandbox.cpus", 2)
+	v.SetDefault("sandbox.memory_mb", 2048)
+	v.SetDefault("sandbox.pids_limit", 256)
+	v.SetDefault("sandbox.timeout_seconds", 1800)
+	v.SetDefault("sandbox.max_concurrent", 1)
+	v.SetDefault("sandbox.max_output_bytes", 200000)
+	v.SetDefault("sandbox.default_image", "alpine:3.20")
+	v.SetDefault("sandbox.images", []string{
+		"alpine:3.20",
+		"golang:1.27-alpine",
+		"node:22-alpine",
+		"python:3.13-alpine",
+		"eclipse-temurin:21-jdk-alpine",
+		"mcr.microsoft.com/dotnet/sdk:8.0-alpine",
+	})
 
 	if err := v.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("read config %s: %w", configPath, err)
@@ -196,6 +226,20 @@ func (c *SysConfig) Validate() error {
 	if c.Scheduler.Timezone != "" {
 		if _, err := time.LoadLocation(c.Scheduler.Timezone); err != nil {
 			return fmt.Errorf("scheduler.timezone is invalid: %w", err)
+		}
+	}
+	if strings.EqualFold(c.Sandbox.Driver, "docker") {
+		if strings.TrimSpace(c.Sandbox.DefaultImage) == "" {
+			return fmt.Errorf("sandbox.default_image is required when sandbox.driver is docker")
+		}
+		if len(c.Sandbox.Images) == 0 {
+			return fmt.Errorf("sandbox.images must contain at least one allowed image")
+		}
+		if c.Sandbox.TimeoutSeconds <= 0 {
+			c.Sandbox.TimeoutSeconds = 1800
+		}
+		if c.Sandbox.MaxConcurrent <= 0 {
+			c.Sandbox.MaxConcurrent = 1
 		}
 	}
 	return nil

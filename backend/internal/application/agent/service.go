@@ -17,8 +17,9 @@ import (
 )
 
 var (
-	ErrValidation = errors.New("validation failed")
-	ErrPlanExists = errors.New("task plan already exists")
+	ErrValidation         = errors.New("validation failed")
+	ErrPlanExists         = errors.New("task plan already exists")
+	ErrSandboxUnavailable = errors.New("sandbox execution is unavailable")
 )
 
 const (
@@ -36,7 +37,10 @@ type Service struct {
 	tasks         domain.TaskRepository
 	approvals     domain.ApprovalRepository
 	runs          domain.AgentRunRepository
+	sandbox       domain.SandboxExecutor
+	changes       domain.WorkspaceChangeTracker
 	broker        *event.Broker
+	executionSem  chan struct{}
 
 	conversationLocks sync.Map
 }
@@ -50,8 +54,14 @@ func NewService(
 	tasks domain.TaskRepository,
 	approvals domain.ApprovalRepository,
 	runs domain.AgentRunRepository,
+	sandbox domain.SandboxExecutor,
+	changes domain.WorkspaceChangeTracker,
+	executionConcurrency int,
 	broker *event.Broker,
 ) *Service {
+	if executionConcurrency <= 0 {
+		executionConcurrency = 1
+	}
 	return &Service{
 		projects:      projects,
 		profiles:      profiles,
@@ -61,7 +71,10 @@ func NewService(
 		tasks:         tasks,
 		approvals:     approvals,
 		runs:          runs,
+		sandbox:       sandbox,
+		changes:       changes,
 		broker:        broker,
+		executionSem:  make(chan struct{}, executionConcurrency),
 	}
 }
 
@@ -404,15 +417,16 @@ func (s *Service) newRun(projectID uuid.UUID, kind, title string) *domain.AgentR
 	now := time.Now().UTC()
 	id, _ := uuid.NewV7()
 	return &domain.AgentRun{
-		ID:        id,
-		ProjectID: projectID,
-		Kind:      kind,
-		Status:    domain.AgentRunStatusRunning,
-		Title:     title,
-		Logs:      []domain.RunLog{},
-		StartedAt: &now,
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:           id,
+		ProjectID:    projectID,
+		Kind:         kind,
+		Status:       domain.AgentRunStatusRunning,
+		Title:        title,
+		ChangedFiles: []string{},
+		Logs:         []domain.RunLog{},
+		StartedAt:    &now,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 }
 

@@ -155,6 +155,8 @@ backlog -> ready -> in_progress -> review -> done
 - 任务只有在全部依赖为 `done` 时才从 `backlog` 进入 `ready`。
 - `ready -> in_progress` 必须经过任务执行审批。
 - 执行完成记录会进入 `review`，验收通过后进入 `done`。
+- 执行审批通过后，任务在独立 Docker 沙箱中运行受控命令；运行日志、退出码和变更文件写入 `agent_runs`。
+- 沙箱只共享项目工作区，不继承完整聊天记录或宿主机目录。
 
 ### 任务信封
 
@@ -259,9 +261,10 @@ backlog -> ready -> in_progress -> review -> done
 - 远程只监听 Tailscale 接口，TLS 1.3 + 证书固定，可选 mTLS。
 - 桌面 WebView 使用 Wails IPC，不直接访问本地 HTTP。
 - 生产桌面不向 WebView 提供 HTTP 回退；浏览器调试回退仅用于本地开发。移动端 SSE/WebSocket 同样使用 TLS。
-- 代码只在非 root Docker 沙箱中执行。
-- 沙箱默认断网、只读根文件系统、限制 CPU/内存/PID/时间。
-- 只挂载任务 worktree，不挂载 Docker Socket、用户主目录和密钥。
+- 代码只在一次性 Docker 沙箱中执行，使用 `cap-drop=ALL` 和 `no-new-privileges`。
+- 沙箱默认断网，限制 CPU/内存/PID/时间；根文件系统是容器临时层，项目工作区可写。
+- 沙箱只共享项目工作区，不挂载 Docker Socket、用户主目录和密钥；开发后端通过本机 Docker 创建兄弟容器。
+- 后续应使用独立 runner 或受限 Docker API 代理缩小后端的 Docker 权限。
 - 合并、部署、删除必须人工审批。
 - 审计登录、设备、任务、工具调用、审批和部署。
 

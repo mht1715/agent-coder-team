@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onActivated, onMounted, reactive, ref } from 'vue'
+import { computed, onActivated, onDeactivated, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Check, ClipboardList, Play, RefreshCw, X } from 'lucide-vue-next'
+import { Check, ClipboardList, Eye, FileDiff, Play, RefreshCw, Terminal, X } from 'lucide-vue-next'
 import {
   decideApproval,
   finishRun,
@@ -28,6 +28,9 @@ const finishForm = reactive({
   status: 'succeeded' as 'succeeded' | 'failed' | 'cancelled',
   output_summary: '',
 })
+const detailRun = ref<AgentRun | null>(null)
+const detailVisible = ref(false)
+let pollTimer: ReturnType<typeof setTimeout> | undefined
 
 const taskByID = computed(() => new Map(tasks.value.map((task) => [task.id, task])))
 const pendingApprovals = computed(() => approvals.value.filter((item) => item.status === 'pending'))
@@ -44,11 +47,33 @@ async function load(silent = false) {
     approvals.value = approvalItems
     runs.value = runItems
     tasks.value = taskItems
+    if (detailRun.value) {
+      const currentID = detailRun.value.id
+      detailRun.value = runItems.find((run) => run.id === currentID) || detailRun.value
+    }
   } catch (error) {
     ElMessage.error(translateApiError(error, t))
   } finally {
     if (!silent) loading.value = false
+    ensurePolling()
   }
+}
+
+function ensurePolling() {
+  if (pollTimer) {
+    clearTimeout(pollTimer)
+    pollTimer = undefined
+  }
+  if (activeRuns.value.length === 0) return
+  pollTimer = setTimeout(async () => {
+    pollTimer = undefined
+    await load(true)
+  }, 2500)
+}
+
+function openDetails(run: AgentRun) {
+  detailRun.value = run
+  detailVisible.value = true
 }
 
 async function decide(approval: Approval, decision: 'approve' | 'reject') {
@@ -113,6 +138,14 @@ function formatTime(value: string) {
 
 onMounted(() => void load())
 onActivated(() => void load(true))
+onDeactivated(() => {
+  if (pollTimer) clearTimeout(pollTimer)
+  pollTimer = undefined
+})
+onUnmounted(() => {
+  if (pollTimer) clearTimeout(pollTimer)
+  pollTimer = undefined
+})
 </script>
 
 <template>
@@ -150,7 +183,7 @@ onActivated(() => void load(true))
               <time>{{ formatTime(approval.created_at) }}</time>
             </div>
             <h4>{{ approval.title }}</h4>
-            <p>{{ approval.description }}</p>
+            <p class="prewrap">{{ approval.description }}</p>
             <div v-if="approvalTask(approval)" class="record-link">
               <span>{{ t('task.task') }}</span>
               <el-tag size="small" effect="plain">{{ approvalTask(approval)?.task_key }}</el-tag>
@@ -190,22 +223,49 @@ onActivated(() => void load(true))
                   {{ t(`activity.runStatus.${run.status}`) }}
                 </el-tag>
                 <span class="record-kind">{{ t(`activity.runKind.${run.kind}`) }}</span>
+                <span v-if="run.executor" class="record-kind">{{ run.executor }}</span>
               </div>
               <time>{{ formatTime(run.created_at) }}</time>
             </div>
             <h4>{{ run.title }}</h4>
-            <p v-if="run.output_summary">{{ run.output_summary }}</p>
-            <p v-else-if="run.input_summary">{{ run.input_summary }}</p>
+            <p v-if="run.output_summary" class="prewrap">{{ run.output_summary }}</p>
+            <p v-else-if="run.input_summary" class="prewrap">{{ run.input_summary }}</p>
+            <div class="record-meta">
+              <span v-if="run.executor">{{ t('activity.executor') }}: {{ run.executor }}</span>
+              <span v-if="run.exit_code !== undefined">{{ t('activity.exitCode') }}: {{ run.exit_code }}</span>
+              <span v-if="run.changed_files?.length">{{ t('activity.changedFiles') }}: {{ run.changed_files.length }}</span>
+            </div>
+            <div v-if="run.changed_files?.length" class="changed-files">
+              <el-tag v-for="file in run.changed_files.slice(0, 5)" :key="file" size="small" effect="plain">
+                <FileDiff :size="11" />
+                {{ file }}
+              </el-tag>
+              <span v-if="run.changed_files.length > 5">+{{ run.changed_files.length - 5 }}</span>
+            </div>
             <div class="run-logs">
               <div v-for="(log, index) in run.logs.slice(-4)" :key="`${run.id}-${index}`" class="run-log">
                 <span>{{ formatTime(log.at) }}</span>
                 <p>{{ log.message }}</p>
               </div>
             </div>
-            <div v-if="run.status === 'queued' || run.status === 'running'" class="record-actions">
-              <el-button size="small" type="primary" plain @click="openFinish(run)">
+            <div class="record-actions">
+              <el-button size="small" plain @click="openDetails(run)">
+                <Eye :size="14" />
+                <span>{{ t('activity.viewDetails') }}</span>
+              </el-button>
+              <el-button
+                v-if="(run.status === 'queued' || run.status === 'running') && !run.executor"
+                size="small"
+                type="primary"
+                plain
+                @click="openFinish(run)"
+              >
                 {{ t('activity.recordResult') }}
               </el-button>
+              <span v-if="run.executor && (run.status === 'queued' || run.status === 'running')" class="sandbox-note">
+                <Terminal :size="12" />
+                {{ t('activity.sandboxManaged') }}
+              </span>
             </div>
           </article>
         </div>
@@ -233,6 +293,45 @@ onActivated(() => void load(true))
       <template #footer>
         <el-button @click="finishDialogVisible = false">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" :loading="finishing" @click="submitFinish">{{ t('common.save') }}</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="detailVisible" :title="t('activity.runDetails')" width="760px" append-to-body>
+      <template v-if="detailRun">
+        <div class="detail-head">
+          <div>
+            <el-tag size="small" effect="plain" :type="statusType(detailRun.status)">
+              {{ t(`activity.runStatus.${detailRun.status}`) }}
+            </el-tag>
+            <span class="detail-title">{{ detailRun.title }}</span>
+          </div>
+          <time>{{ formatTime(detailRun.created_at) }}</time>
+        </div>
+        <el-descriptions :column="3" border size="small" class="detail-descriptions">
+          <el-descriptions-item :label="t('activity.executor')">{{ detailRun.executor || '-' }}</el-descriptions-item>
+          <el-descriptions-item :label="t('activity.exitCode')">{{ detailRun.exit_code ?? '-' }}</el-descriptions-item>
+          <el-descriptions-item :label="t('activity.changedFiles')">{{ detailRun.changed_files?.length || 0 }}</el-descriptions-item>
+        </el-descriptions>
+        <section v-if="detailRun.input_summary" class="detail-section">
+          <h5><Terminal :size="14" />{{ t('activity.executionSpec') }}</h5>
+          <pre>{{ detailRun.input_summary }}</pre>
+        </section>
+        <section class="detail-section">
+          <h5><FileDiff :size="14" />{{ t('activity.changedFiles') }}</h5>
+          <div v-if="detailRun.changed_files?.length" class="detail-files">
+            <el-tag v-for="file in detailRun.changed_files" :key="file" size="small" effect="plain">{{ file }}</el-tag>
+          </div>
+          <p v-else class="detail-empty">{{ t('activity.noChangedFiles') }}</p>
+        </section>
+        <section class="detail-section">
+          <h5><Terminal :size="14" />{{ t('activity.commandOutput') }}</h5>
+          <div class="detail-logs">
+            <div v-for="(log, index) in detailRun.logs" :key="`detail-${index}`" class="detail-log">
+              <span>{{ formatTime(log.at) }}</span>
+              <p :class="`log-${log.level}`">{{ log.message }}</p>
+            </div>
+          </div>
+        </section>
       </template>
     </el-dialog>
   </div>
@@ -312,7 +411,12 @@ onActivated(() => void load(true))
     }
 
     h4 { margin: var(--act-space-2) 0 6px; font-size: 13px; font-weight: 600; }
-    p { margin: 0; color: var(--act-text-muted); font-size: 11px; line-height: 1.6; white-space: pre-wrap; }
+    p { margin: 0; color: var(--act-text-muted); font-size: 11px; line-height: 1.6; }
+    p.prewrap { white-space: pre-wrap; }
+
+    .record-meta { display: flex; flex-wrap: wrap; gap: var(--act-space-3); margin-top: var(--act-space-2); color: var(--act-text-muted); font-size: 10px; }
+    .changed-files { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-top: var(--act-space-2); font-size: 10px; }
+    .sandbox-note { display: inline-flex; gap: 5px; align-items: center; color: var(--act-text-muted); font-size: 10px; }
 
     .record-link { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: var(--act-space-2); font-size: 10px; color: var(--act-text-secondary); }
 
@@ -342,5 +446,67 @@ onActivated(() => void load(true))
 
 @media (max-width: 1100px) {
   .activity-grid { grid-template-columns: 1fr; }
+}
+</style>
+
+<style scoped lang="scss">
+.detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--act-space-3);
+  margin-bottom: var(--act-space-3);
+
+  .detail-title { margin-left: var(--act-space-2); font-size: 14px; font-weight: 600; }
+  time { color: var(--act-text-muted); font-size: 10px; }
+}
+
+.detail-descriptions { margin-bottom: var(--act-space-4); }
+
+.detail-section {
+  margin-top: var(--act-space-3);
+
+  h5 { display: flex; gap: 6px; align-items: center; margin: 0 0 var(--act-space-2); font-size: 12px; font-weight: 600; }
+  pre {
+    max-height: 180px;
+    margin: 0;
+    padding: var(--act-space-3);
+    overflow: auto;
+    border: 1px solid var(--act-border);
+    border-radius: var(--act-radius-sm);
+    background: var(--act-bg-soft);
+    color: var(--act-text-secondary);
+    font-family: var(--act-font-mono);
+    font-size: 11px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+}
+
+.detail-files { display: flex; flex-wrap: wrap; gap: 6px; }
+.detail-empty { margin: 0; color: var(--act-text-muted); font-size: 11px; }
+
+.detail-logs {
+  display: flex;
+  max-height: 340px;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--act-space-2);
+  overflow-y: auto;
+  border: 1px solid var(--act-border);
+  border-radius: var(--act-radius-sm);
+  background: var(--act-bg-soft);
+
+  .detail-log {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: 92px minmax(0, 1fr);
+    color: var(--act-text-muted);
+    font-size: 10px;
+
+    p { margin: 0; white-space: pre-wrap; word-break: break-word; }
+    .log-error { color: var(--el-color-danger); }
+    .log-warn { color: var(--el-color-warning); }
+  }
 }
 </style>
