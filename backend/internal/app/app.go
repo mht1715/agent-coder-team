@@ -3,11 +3,17 @@ package app
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"backend/internal/application/auth"
+	"backend/internal/application/project"
 	"backend/internal/config"
 	"backend/internal/health"
 	"backend/internal/infrastructure/cache"
+	"backend/internal/infrastructure/migrate"
+	"backend/internal/infrastructure/persistence"
 	"backend/internal/infrastructure/postgres"
+	"backend/internal/security"
 	httpserver "backend/internal/transport/http"
 
 	"github.com/rs/zerolog/log"
@@ -26,14 +32,43 @@ func New(cfg *config.SysConfig) (*App, error) {
 		return nil, err
 	}
 
+	if cfg.Database.RunMigrations {
+		if err := migrate.Up(cfg.Database); err != nil {
+			_ = db.Close()
+			return nil, err
+		}
+	}
+
 	redisClient, err := cache.Open(cfg.Redis)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
 
+	accessTTL, err := time.ParseDuration(cfg.Auth.SessionTTL)
+	if err != nil {
+		_ = redisClient.Close()
+		_ = db.Close()
+		return nil, fmt.Errorf("parse auth.session_ttl: %w", err)
+	}
+	refreshTTL, err := time.ParseDuration(cfg.Auth.RefreshTTL)
+	if err != nil {
+		_ = redisClient.Close()
+		_ = db.Close()
+		return nil, fmt.Errorf("parse auth.refresh_ttl: %w", err)
+	}
+
+	repositories := persistence.NewRepositories(db.DB)
+	authService := auth.NewService(
+		repositories.Users,
+		repositories.Sessions,
+		security.NewPasswordHasher(),
+		accessTTL,
+		refreshTTL,
+	)
+	projectService := project.NewService(repositories.Projects)
 	healthSvc := health.New(db, redisClient)
-	server := httpserver.New(cfg, healthSvc)
+	server := httpserver.New(cfg, healthSvc, authService, projectService)
 
 	return &App{
 		cfg:    cfg,

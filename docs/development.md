@@ -263,6 +263,9 @@ docker compose exec backend go test ./...
 - PostgreSQL 和 Redis 连接、就绪检查。
 - 请求 ID 和访问日志中间件。
 - 优雅关闭。
+- 数据库迁移和基础表。
+- 本地账号、登录、刷新令牌、退出。
+- 项目创建、列表、详情和更新。
 - 基础单元测试。
 
 可用端点：
@@ -271,12 +274,20 @@ docker compose exec backend go test ./...
 GET /healthz
 GET /readyz
 GET /api/v1/meta
+POST /api/v1/auth/register
+POST /api/v1/auth/login
+POST /api/v1/auth/refresh
+POST /api/v1/auth/logout
+GET /api/v1/me
+POST /api/v1/projects
+GET /api/v1/projects
+GET /api/v1/projects/:id
+PATCH /api/v1/projects/:id
 ```
 
 下一步：
 
-1. 数据库迁移和基础表。
-2. 本地账号、会话和认证中间件。
-3. 项目创建、导入和项目列表。
-4. 项目群聊和消息存储。
-5. M0 技术验证：Wails IPC、Docker 沙箱、pgvector、Tailscale/TLS。
+1. 项目群聊和消息存储。
+2. 项目工作目录检测和项目画像。
+3. Wails 桌面端骨架。
+4. M0 技术验证：Docker 沙箱、pgvector、Tailscale/TLS。

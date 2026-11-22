@@ -23,7 +23,8 @@ func Open(cfg config.DatabaseConfig) (*Client, error) {
 	)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Warn),
+		Logger:         logger.Default.LogMode(logger.Warn),
+		TranslateError: true,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("open postgres: %w", err)

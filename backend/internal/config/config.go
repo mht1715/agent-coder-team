@@ -48,6 +48,7 @@ type DatabaseConfig struct {
 	MaxOpenConns    int    `mapstructure:"max_open_conns"`
 	MaxIdleConns    int    `mapstructure:"max_idle_conns"`
 	ConnMaxLifetime string `mapstructure:"conn_max_lifetime"`
+	RunMigrations   bool   `mapstructure:"run_migrations"`
 }
 
 type RedisConfig struct {

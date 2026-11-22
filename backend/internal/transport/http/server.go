@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	authapp "backend/internal/application/auth"
+	projectapp "backend/internal/application/project"
 	"backend/internal/config"
 	"backend/internal/health"
 	"backend/internal/transport/http/handler"
@@ -21,8 +23,15 @@ type Server struct {
 	httpServer *http.Server
 }
 
-func New(cfg *config.SysConfig, healthSvc *health.Service) *Server {
-	h := handler.NewHealthHandler(healthSvc, cfg.App.Name, cfg.App.Version, cfg.App.Environment)
+func New(
+	cfg *config.SysConfig,
+	healthSvc *health.Service,
+	authSvc *authapp.Service,
+	projectSvc *projectapp.Service,
+) *Server {
+	healthHandler := handler.NewHealthHandler(healthSvc, cfg.App.Name, cfg.App.Version, cfg.App.Environment)
+	authHandler := handler.NewAuthHandler(authSvc)
+	projectHandler := handler.NewProjectHandler(projectSvc)
 
 	router := gin.New()
 	router.Use(
@@ -31,11 +40,23 @@ func New(cfg *config.SysConfig, healthSvc *health.Service) *Server {
 		middleware.AccessLog(),
 	)
 
-	router.GET("/healthz", h.Healthz)
-	router.GET("/readyz", h.Readyz)
+	router.GET("/healthz", healthHandler.Healthz)
+	router.GET("/readyz", healthHandler.Readyz)
 
 	v1 := router.Group("/api/v1")
-	v1.GET("/meta", h.Meta)
+	v1.GET("/meta", healthHandler.Meta)
+	v1.POST("/auth/register", authHandler.Register)
+	v1.POST("/auth/login", authHandler.Login)
+	v1.POST("/auth/refresh", authHandler.Refresh)
+
+	protected := v1.Group("")
+	protected.Use(middleware.RequireAuth(authSvc))
+	protected.POST("/auth/logout", authHandler.Logout)
+	protected.GET("/me", authHandler.Me)
+	protected.POST("/projects", projectHandler.Create)
+	protected.GET("/projects", projectHandler.List)
+	protected.GET("/projects/:id", projectHandler.Get)
+	protected.PATCH("/projects/:id", projectHandler.Update)
 
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	return &Server{
